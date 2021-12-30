@@ -4,7 +4,7 @@ LymphoSeq2_Shiny is an interactive web app version of [LymphoSeq2](https://githu
 
 ## Required Packages
 
-The following packages are used by LymphoSeq2_Shiny and will need to be installed (if not already) before running the application (the * will indicate special instructions in installation. See below the list for more details): 
+The following packages are used by LymphoSeq2_Shiny and will need to be installed (if not already) before running the application (The * will indicate special instructions for installation. See below the list for more details.): 
 
 1. shiny
 2. shinycssloaders
@@ -18,7 +18,11 @@ The following packages are used by LymphoSeq2_Shiny and will need to be installe
 10. sp
 11. ggalluvial*
 
-* For ggalluvial,
+### * Special Installation Instuctions
+This application uses the development version of **ggalluvial** and needs to be installed using the following code
+```
+remotes::install_github("corybrunson/ggalluvial@main", build_vignettes = FALSE)
+```
 
 
 
