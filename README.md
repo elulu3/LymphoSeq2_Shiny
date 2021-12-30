@@ -17,7 +17,6 @@ The following packages are used by LymphoSeq2_Shiny and will need to be installe
 9. htmltools
 10. sp
 11. ggalluvial*
-\n
 
   ***\* Special Installation Instuctions***
   
@@ -26,10 +25,14 @@ The following packages are used by LymphoSeq2_Shiny and will need to be installe
   remotes::install_github("corybrunson/ggalluvial@main", build_vignettes = FALSE)
   ```
 
+## Running the Application
 
-
-To run the application, the **Shiny** package must be installed and loaded in an R session.
+To run the application, the **Shiny** package must first be loaded in an R session and then call Shiny's `runApp` function.
 ```
-install.packages("shiny")
+# Load the Shiny package
 library(shiny)
+
+# Run the application
+runApp("LymphoSeq2_app")
+
 ```
