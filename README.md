@@ -5,6 +5,6 @@ LymphoSeq2_Shiny is an interactive web app version of [LymphoSeq2](https://githu
 ## Required Packages
 
 To run the application, the **Shiny** package must be installed.
-'''
+```
 install.packages("shiny")
-'''
+```
