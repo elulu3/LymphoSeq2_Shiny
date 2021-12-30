@@ -4,7 +4,26 @@ LymphoSeq2_Shiny is an interactive web app version of [LymphoSeq2](https://githu
 
 ## Required Packages
 
-To run the application, the **Shiny** package must be installed.
+The following packages are used by LymphoSeq2_Shiny and will need to be installed (if not already) before running the application (the * will indicate special instructions in installation. See below the list for more details): 
+
+1. shiny
+2. shinycssloaders
+3. ggplot2
+4. plotly
+5. DT
+6. heatmaply
+7. chorddiag
+8. tidyverse
+9. htmltools
+10. sp
+11. ggalluvial*
+
+* For ggalluvial,
+
+
+
+To run the application, the **Shiny** package must be installed and loaded in an R session.
 ```
 install.packages("shiny")
+library(shiny)
 ```
