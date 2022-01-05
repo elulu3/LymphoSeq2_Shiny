@@ -673,8 +673,7 @@ server <- function(input, output, session) {
                 if (input$tabselected == "v_gene_freq") {
                     pheatmap(data_output[[1]], color = data_output[[2]], scale = "row")
                 } else if (input$tabselected == "chord_diagram") {
-                    # circlize::chordDiagram(data_output, annotationTrack = c("grid", "name"))
-                    print(data_output)
+                    circlize::chordDiagram(data_output, annotationTrack = c("grid", "name"))
                 } else if (input$tabselected == "common_venn") {
                     grid::grid.newpage()
                     grid::grid.draw(data_output)
