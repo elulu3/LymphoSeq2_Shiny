@@ -14,7 +14,6 @@ library(chorddiag)
 library(writexl)
 library(shinyjs)
 
-
 options(shiny.maxRequestSize = 30 * 1024^2)
 
 ui <- fluidPage(
@@ -241,7 +240,7 @@ server <- function(input, output, session) {
                 need(length(input$rep_id) > 1,
                         "Please select at least 2 repertoire ids")
             )
-            data_output <<- LymphoSeq2::commonSeqsBar(productive_aa(), input$rep_id)
+            data_output <<- LymphoSeq2::commonSeqsBar(productive_aa(), input$rep_id, labels = "yes")
             data_output
         })
     })
@@ -257,7 +256,22 @@ server <- function(input, output, session) {
                 need(length(input$plot_id) == 2,
                     "Please select exactly 2 repertoire ids")
             )
-            data_output <<- LymphoSeq2::commonSeqsPlot(input$plot_id[1], input$plot_id[2], productive_aa())
+            rep_id_legal <- c()
+            aa <- productive_aa()
+            digit_vector <- c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+            replaced <- c()
+
+            for (i in input$plot_id) {
+                if (startsWith(substr(i, 1, 1), digit_vector)) {
+                    rep_id_legal <- append(rep_id_legal, paste("plot_", i, sep=''))
+                    replaced <- append(replaced, i)
+                } else {
+                    rep_id_legal <- append(rep_id_legal, i)
+                }
+            }
+            aa <- aa %>% mutate(repertoire_id = dplyr::if_else(repertoire_id %in% replaced, 
+                paste0("plot_", repertoire_id), repertoire_id))
+            data_output <<- LymphoSeq2::commonSeqsPlot(rep_id_legal[1], rep_id_legal[2], aa)
             data_output
         })
     })
@@ -659,10 +673,13 @@ server <- function(input, output, session) {
                 if (input$tabselected == "v_gene_freq") {
                     pheatmap(data_output[[1]], color = data_output[[2]], scale = "row")
                 } else if (input$tabselected == "chord_diagram") {
-                    circlize::chordDiagram(data_output, annotationTrack = c("grid", "name"))
+                    # circlize::chordDiagram(data_output, annotationTrack = c("grid", "name"))
+                    print(data_output)
                 } else if (input$tabselected == "common_venn") {
                     grid::grid.newpage()
                     grid::grid.draw(data_output)
+                } else if (input$tabselected == "common_bar") {
+                    print(data_output)
                 } else {
                     plot(data_output)
                 }
