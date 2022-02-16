@@ -1,6 +1,6 @@
 # LymphoSeq2_Shiny
 
-LymphoSeq2_Shiny is an interactive web app version of [LymphoSeq2](https://github.com/shashidhar22/LymphoSeq2/tree/v0.0.0.9000) built with the Shiny R package. This Shiny application will allow you to upload Adaptive Immune Receptor Repertoire Sequencing (AIRR-seq) data to display and download as PDF various analytical visualizations. 
+LymphoSeq2_Shiny is an interactive web app version of [LymphoSeq2](https://github.com/shashidhar22/LymphoSeq2/tree/v0.0.0.9000) built with the Shiny R package. This Shiny application will allow you to upload Adaptive Immune Receptor Repertoire Sequencing (AIRR-seq) data to display and perform various analytical visualizations. All graphical visualizations will also be available to be downloaded as PDF files. Data tables will be available to be downloaded as TSV, Excel, and RData files.
 
 ## Required Packages
 
