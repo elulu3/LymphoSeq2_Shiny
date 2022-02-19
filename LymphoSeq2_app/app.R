@@ -1,9 +1,10 @@
 library(shiny)
 library(shinycssloaders)
-library(LymphoSeqTest)
+library(LymphoSeq2)
 library(DT)
 library(tidyverse)
 library(ggplot2)
+library(ggfittext)
 library(plotly)
 library(heatmaply)
 library(pheatmap)
@@ -21,7 +22,7 @@ options(shiny.maxRequestSize = 50 * 1024^2)
 
 ui <- fluidPage(
     shinyjs::useShinyjs(),
-    titlePanel("LymphoSeqTest Shiny"),
+    titlePanel("LymphoSeq2 Shiny"),
     tags$head(
         tags$style(
             HTML(".shiny-notification {
@@ -36,12 +37,15 @@ ui <- fluidPage(
             fileInput("airr_files", label = "Upload Files", multiple = TRUE, accept = ".tsv"),
 
             conditionalPanel(condition = "input.tabselected == 'chord_diagram'",
-                selectizeInput("vdj_association", label = "Select VDJ Association", choices = c("", "VJ", "DJ")),
+                selectizeInput("vdj_association", label = "Select VDJ Association",
+                                choices = c("", "VJ", "DJ")),
                 actionButton("chord_button", label = "Create Chord Diagram")),
 
             conditionalPanel(condition = "input.tabselected == 'common_panel' && input.common_sub_tab == 'common_bar'",
                 selectizeInput("bar_id", label = "Select at least 2 repertoire ids", choices = NULL, multiple = TRUE),
+                h1("Options to color bar chart:", style = "font-size:15px"),
                 selectizeInput("color_rep_id", label = "Select 1 repertoire id to color", choices = NULL, selected = NULL),
+                h5("OR", align = "center"),
                 selectizeInput("color_intersect", label = "Select at least 2 repertoire ids to color intersections", 
                                 choices = NULL, multiple = TRUE, selected = NULL),
                 actionButton("bar_button", label = "Create Bar Chart")),
@@ -65,13 +69,16 @@ ui <- fluidPage(
                 selectizeInput("word_id", label = "Select repertoire id", choices = NULL),
                 actionButton("word_button", label = "Create Word Cloud")),
             
-            conditionalPanel(condition = "input.tabselected == 'clonal_relate'",
+            conditionalPanel(condition = "input.tabselected == 'clonality_panel' && input.clonal_sub_tab == 'clonal_relate'",
+                numericInput("edit_dis", label = "Minimum edit distance the sequence must be less than or equal to:",
+                                value = 10, min = 0),
                 radioButtons("merge_results", "Merge results with clonality table?",
-                            choices = c("no", "yes"), inline = TRUE)),
+                            choices = c("no", "yes"), inline = TRUE),
+                actionButton("clonal_relate_button", "Create Table")),
             
             conditionalPanel(condition = "input.tabselected == 'diff_abundance'",
                 selectizeInput("diff_id", label = "Select 2 repertoire ids to be compared",
-                    choices = NULL, multiple = TRUE),
+                    choices = c(""), multiple = TRUE),
                 numericInput("q_val", "q Value (False Discovery Rate):", value = 1, min = 0, max = 1),
                 numericInput("zero_val", "Zero Value:", value = 1),
                 actionButton("diff_button", "Create Table")),
@@ -91,6 +98,11 @@ ui <- fluidPage(
             conditionalPanel(condition = "input.tabselected == 'pairwise_sim'",
                 radioButtons("mode", "Select mode to use for calculation:",
                     choices = c("Bhattacharyya", "Similarity", "Sorensen", "PSI"))),
+
+            conditionalPanel(condition = "input.tabselected == 'prod_seq_panel' && 
+                                (input.prod_seq_sub_tab == 'top_seq_table' || input.prod_seq_sub_tab == 'top_seq_plot')",
+                numericInput("top_seq_num", "Number of top sequences:", value = NULL, min = 0),
+                actionButton("top_seq_button", "Calculate Top Sequences")),
             
             tags$br(),
             fluidRow (style = "border: 1px solid #d3d3d3; border-radius: 5px;",
@@ -108,7 +120,7 @@ ui <- fluidPage(
             tabsetPanel(
                 tabPanel("AIRR Data Table", value = "airr_table",
                         DT::dataTableOutput("table") %>% withSpinner()),
-                tabPanel("Explore Common Sequences", value = "common_panel",
+                tabPanel("Explore Common Productive Sequences", value = "common_panel",
                             tabsetPanel(
                                 tabPanel("Common Sequences Table", value = "common_seq_table",
                                     DT::dataTableOutput("common_seq_table") %>% withSpinner()),
@@ -122,10 +134,12 @@ ui <- fluidPage(
                             )),
                 tabPanel("Explore Productive Sequences", value = "prod_seq_panel",
                             tabsetPanel(
+                                tabPanel("Top Productive Sequences Table", value = "top_seq_table",
+                                    DT::dataTableOutput("top_seq_table") %>% withSpinner()),
+                                tabPanel("Top Productive Sequences Plot", value = "top_seq_plot",
+                                    plotlyOutput("top_seq_plot") %>% withSpinner()),                                    
                                 tabPanel("Unique Productive Sequences Plot", value = "produtive_seq_plot",
                                     plotlyOutput("productive_plot") %>% withSpinner()),
-                                tabPanel("Top Productive Sequences Table", value = "top_10_seq_table",
-                                    DT::dataTableOutput("top_productive_seq") %>% withSpinner()),
                                 id = "prod_seq_sub_tab"
                             )),
                 tabPanel("Explore Gene Frequencies", value = "gene_panel",
@@ -150,24 +164,21 @@ ui <- fluidPage(
                                     DT::dataTableOutput("clonality_stats") %>% withSpinner()),
                                 tabPanel("Clonality Plot", value = "clonality_plot",
                                     plotlyOutput("clonality_plot") %>% withSpinner()),
+                                tabPanel("Sequencing Counts", value = "seq_counts",
+                                    DT::dataTableOutput("seq_count") %>% withSpinner()),
+                                tabPanel("Count Statistics", value = "count_stats",
+                                    DT::dataTableOutput("stats_count") %>% withSpinner()),               
                                 id = "clonal_sub_tab"
                             )),
                 tabPanel("Chord Diagram VDJ", value = "chord_diagram",
                         chorddiagOutput("chord_diagram", width = '100%', height = '600px') %>% withSpinner()),
                 tabPanel("Lorenz Curve", value = "lorenz_curve",
                         plotlyOutput("lorenz") %>% withSpinner()),
-                tabPanel("Sequencing Counts", value = "seq_counts",
-                        DT::dataTableOutput("seq_count") %>% withSpinner()),
-                tabPanel("Count Statistics", value = "count_stats",
-                        DT::dataTableOutput("stats_count") %>% withSpinner()),
-                tabPanel("Top 10 Sequences Plot", value = "top_10_seq_plot",
-                        plotlyOutput("top_10_seq") %>% withSpinner()),
-                tabPanel("Clone Tracking", tags$div(
+                tabPanel("Clone Tracking", value = "clone_track", tags$div(
                         style = "position: relative;",
                         plotOutput("clone_track",
                         hover = hoverOpts(id = "clone_track_hover")) %>% withSpinner(),
-                        htmlOutput("clone_track_tooltip")),
-                        value = "clone_track"),
+                        htmlOutput("clone_track_tooltip"))),
                 tabPanel("Pairwise Similarity", value = "pairwise_sim",
                         plotlyOutput("pairwise_sim") %>% withSpinner()),
                 tabPanel("Public TCRB Sequences", value = "public_tcrb_seq",
@@ -196,8 +207,7 @@ server <- function(input, output, session) {
             need(!is.null(input$airr_files),
                     "Please select files to upload to render output.")
         )
-        table <- LymphoSeqTest::readImmunoSeq(input$airr_files$datapath)
-        # files <- c(input$airr_files$name)
+        table <- LymphoSeq2::readImmunoSeq(input$airr_files$datapath)
         in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
         in_files <- unlist(in_files)
         table <- table %>%
@@ -211,27 +221,38 @@ server <- function(input, output, session) {
     })
 
     productive_aa <- reactive({
-        LymphoSeqTest::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
+        LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
     })
 
     productive_nt <- reactive({
-        LymphoSeqTest::productiveSeq(study_table = airr_data(), aggregate = "junction")
+        LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction")
     })
 
     unique_prod_rep <- reactive({
         unique(productive_aa()[, "repertoire_id"])
     })
 
+    clonality_data <- reactive({
+        LymphoSeq2::clonality(airr_data())
+    })
+
     observeEvent(input$airr_files, {
+        airr_data()
         if (input$chord_button || input$venn_button || input$bar_button ||
-                input$plot_button || input$diff_button) {
+                input$plot_button || input$diff_button || input$track_button ||
+                input$clonal_relate_button || input$word_button || input$kmer_button ||
+                input$top_seq_button) {
             shinyjs::hide("chord_diagram")
             shinyjs::hide("commonSeqs_venn")
             shinyjs::hide("commonSeqs_bar")
             shinyjs::hide("commonSeqs_plot")
             shinyjs::hide("diff_abundance")
-            shinyjs::hide("pairwise_sim")
             shinyjs::hide("gene_freq_word")
+            shinyjs::hide("clonal_relate")
+            shinyjs::hide("clone_track")
+            shinyjs::hide("count_kmers")
+            shinyjs::hide("top_seq_table")
+            shinyjs::hide("top_seq_plot")
         }
         if (input$tabselected == "chord_diagram" || input$common_sub_tab == "common_venn" ||
                 input$common_sub_tab == "common_bar" || input$common_sub_tab == "common_plot" ||
@@ -260,11 +281,12 @@ server <- function(input, output, session) {
     observeEvent(input$bar_id, {
         shiny::updateSelectizeInput(session, "color_intersect", choices = input$bar_id)
     })
+    
+    data_frame_tabs <- c("airr_table", "seq_counts", "count_stats", "clonality_panel",
+                    "prod_seq_panel", "common_panel", "public_tcrb_seq",
+                    "gene_panel", "diff_abundance", "count_kmers")
 
     observeEvent(input$tabselected, {
-        data_frame_tabs = c("airr_table", "seq_counts", "count_stats", "clonality_panel",
-                            "prod_seq_panel", "common_panel", "public_tcrb_seq",
-                            "gene_panel", "diff_abundance", "count_kmers")
         if (input$tabselected %in% data_frame_tabs) {
             download_choices <- c("TSV" = ".tsv", "EXCEL" = ".xlsx", "Rda" = ".RData")
         } else {
@@ -275,7 +297,7 @@ server <- function(input, output, session) {
             shiny::updateSelectizeInput(session, "diff_id", choices = unique_prod_rep())
         } else if (input$tabselected == "clone_track") {
             shiny::updateSelectizeInput(session, "track_id", choices = unique_prod_rep())
-        }
+        } 
     })
 
     update_common_tabs <- reactive({
@@ -322,9 +344,11 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$prod_seq_sub_tab, {
-        if (input$prod_seq_sub_tab == "top_10_seq_table") {
+        if (input$prod_seq_sub_tab == "top_seq_table") {
             shiny::updateRadioButtons(session, "download_type",
                 choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "Rda" = ".RData"))
+        } else {
+            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf"))
         }
     })
 
@@ -334,17 +358,15 @@ server <- function(input, output, session) {
     })
 
     chord_data <- reactive({
-        top_seqs <- LymphoSeqTest::topSeqs(productive_table = productive_nt(), top = 1)
-        validate(
-            need(!is.null(input$vdj_association), "Please select VDJ Association")
-        )
+        top_seqs <- LymphoSeq2::topSeqs(productive_table = productive_nt(), top = 1)
         if (input$vdj_association == 'VJ') {
             vj <- top_seqs %>% 
                 select(v_family, j_family) %>% 
-                mutate(v_family = replace_na(v_family, "Unresolved"), j_family = replace_na(j_family, "Unresolved"))
+                mutate(v_family = replace_na(v_family, "Unresolved"),
+                       j_family = replace_na(j_family, "Unresolved"))
 
             vj <- vj %>% 
-                group_by(v_family, j_family) %>% 
+                group_by(v_family, j_family) %>%
                 summarize(duplicate_count = n(), .groups = 'drop') %>% 
                 pivot_wider(id_cols=v_family, names_from = j_family, values_from = duplicate_count) 
             row_names <- vj$v_family 
@@ -373,10 +395,15 @@ server <- function(input, output, session) {
 
     output$chord_diagram <- renderChorddiag({
         input$chord_button
-        isolate ({
+        isolate({
+            validate(
+                need(input$vdj_association != "", "Please select VDJ Association")
+            )
             chorddiag::chorddiag(chord_data(), type = "bipartite", groupnameFontsize = 15)
         })
-    })
+    }) %>%
+    bindCache(chord_data()) %>%
+    bindEvent(input$chord_button)
 
     observeEvent(input$bar_button, {
         shinyjs::enable("download")
@@ -392,8 +419,9 @@ server <- function(input, output, session) {
         if (!is.null(input$color_intersect) & "none" %in% input$color_intersect) {
             color_intersect <- NULL
         }
-        data_output <- LymphoSeqTest::commonSeqsBar(productive_aa(),
-                    input$bar_id, color_rep_id, color_intersect,
+        print(c(color_intersect))
+        data_output <- LymphoSeq2::commonSeqsBar(productive_aa(),
+                    input$bar_id, color_rep_id, c(color_intersect),
                     labels = "yes")
         data_output
     })
@@ -430,8 +458,7 @@ server <- function(input, output, session) {
     })
 
     common_seqs_plot <- reactive({
-        print("common")
-        LymphoSeqTest::commonSeqsPlot(input$plot_id[1], input$plot_id[2], productive_aa())
+        LymphoSeq2::commonSeqsPlot(input$plot_id[1], input$plot_id[2], productive_aa())
     })
 
     output$commonSeqs_plot <- renderPlotly({
@@ -458,9 +485,9 @@ server <- function(input, output, session) {
 
     common_venn_data <- reactive({
         if (length(input$venn_id) == 2) {
-            a <- productive_aa() %>% 
+            a <- productive_aa() %>%
                 dplyr::filter(repertoire_id == input$venn_id[[1]])
-            b <- productive_aa() %>% 
+            b <- productive_aa() %>%
                 dplyr::filter(repertoire_id == input$venn_id[[2]])
             grid::grid.newpage()
             venn <- VennDiagram::draw.pairwise.venn(area1 = length(a$junction_aa), 
@@ -529,7 +556,7 @@ server <- function(input, output, session) {
 
     lorenz_data <- reactive({
         repertoire_ids <- productive_aa() %>% dplyr::pull(repertoire_id) %>% unique()
-        data_output <- LymphoSeqTest::lorenzCurve(repertoire_ids, airr_data()) + coord_fixed(1/2)
+        data_output <- LymphoSeq2::lorenzCurve(repertoire_ids, airr_data()) + coord_fixed(1/2)
         data_output
     })
 
@@ -537,12 +564,8 @@ server <- function(input, output, session) {
         lorenz_data()
     })
 
-    itable <- reactive({
-        LymphoSeqTest::clonality(airr_data())
-    })
-
     seq_count_data <- reactive({
-        data_output <- itable() %>%
+        data_output <- clonality_data() %>%
             select(repertoire_id, total_sequences,
                     unique_productive_sequences, total_count)
         data_output
@@ -556,7 +579,7 @@ server <- function(input, output, session) {
     })
 
     stats_count_data <- reactive({
-        stats <- itable() %>%
+        stats <- clonality_data() %>%
             select(repertoire_id, total_sequences,
                     unique_productive_sequences, total_count) %>%
             pivot_longer(!repertoire_id,
@@ -579,75 +602,93 @@ server <- function(input, output, session) {
     })
 
     prod_plot_data <- reactive({
-        data_output <- ggplot(data = itable(), aes(x = repertoire_id, y = unique_productive_sequences)) +
+        data_output <- ggplot(data = clonality_data(), aes(x = repertoire_id, y = unique_productive_sequences)) +
             geom_bar(stat = "identity", position=position_dodge(), fill = "#3182bd") +
             theme_minimal() +
             theme(axis.text.x  = element_text(angle=90, vjust=0.5, hjust = 1), text = element_text(size = 10)) +
-            scale_x_discrete(limits = itable()$repertoire_id) +
+            scale_x_discrete(limits = clonality_data()$repertoire_id) +
             labs(x = "", y = "Unique productive sequences")
         data_output
-    })
+    }) 
 
     output$productive_plot <- renderPlotly({
         plotly::ggplotly(prod_plot_data())
     })
 
+    observeEvent(input$top_seq_button, {
+        shinyjs::enable("download")
+        shinyjs::show("top_seq_table")
+        shinyjs::show("top_seq_plot")
+    })
+
     top_prod_seq_data <- reactive({
-        data_output <- LymphoSeqTest::topSeqs(productive_aa()) %>%
+        data_output <- LymphoSeq2::topSeqs(productive_aa(), input$top_seq_num) %>%
             select(repertoire_id, junction_aa, duplicate_count, duplicate_frequency,
                         v_call, d_call, j_call)
         data_output
     })
 
-    output$top_productive_seq <- DT::renderDataTable({
-        top_prod_seq_data() %>%
-            datatable(rownames = FALSE, filter = "top")
+    output$top_seq_table <- DT::renderDataTable({
+        input$top_seq_button
+        isolate({
+            validate(
+                need(input$top_seq_num > 0, "Please choose number of top sequences.")
+            )
+            top_prod_seq_data() %>%
+                datatable(rownames = FALSE, filter = "top")
+        })
     })
 
     top_seq_data <- reactive({
-        data_output <- topSeqsPlot(productive_aa(), top = 10) +
-            theme(text = element_text(size = 10)) +
-            scale_x_discrete(limits = itable()$repertoire_id)
-        data_output
+        LymphoSeq2::topSeqsPlot(productive_aa(), top = input$top_seq_num)
     })
 
-    output$top_10_seq <- renderPlotly({
-        plotly::ggplotly(top_seq_data())
+    output$top_seq_plot <- renderPlotly({
+        input$top_seq_button
+        isolate({
+            validate(
+                need(input$top_seq_num > 0, "Please choose number of top sequences.")
+            )
+            plotly::ggplotly(top_seq_data())
+        })
     })
 
     common_table_data <- reactive({
-        LymphoSeqTest::commonSeqs(study_table = productive_aa())
+        LymphoSeq2::commonSeqs(study_table = productive_aa())
+
     })
 
     output$common_seq_table <- DT::renderDataTable({
         common_table_data()
     })
 
-    clone_table_data <- reactive({
-        data_output <- itable() %>%
-            select(repertoire_id, clonality, gini_coefficient, top_productive_sequence)
-    })
-
     output$clonality <- DT::renderDataTable({
-        clone_table_data() %>%
-            datatable(rownames = FALSE, colnames = c("Repertoire ID", "Clonality", "Gini Coefficient", "Top Productive Sequence"), filter = "top")
+        clonality_data() %>%
+            datatable(rownames = FALSE, filter = "top")
     })
 
     clone_relate_data <- reactive({
-        data_output <- LymphoSeqTest::clonalRelatedness(airr_data())
+        data_output <- LymphoSeq2::clonalRelatedness(airr_data(), editDistance = input$edit_dis)
         if (input$merge_results == "yes") {
-            clonality <- LymphoSeqTest::clonality(airr_data())
-            data_output <- merge(clonality, data_output)
+            data_output <- merge(clonality_data(), data_output)
         }
         data_output
     })
 
+    observeEvent(input$clonal_relate_button, {
+        shinyjs::enable("download")
+        shinyjs::show("clonal_relate")
+    })
+
     output$clonal_relate <- DT::renderDataTable({
-        clone_relate_data()
+        input$clonal_relate_button
+        isolate({
+            clone_relate_data()
+        })
     })
 
     clone_stats_data <- reactive({
-        data_output <- itable() %>%
+        data_output <- clonality_data() %>%
             select(repertoire_id, clonality, gini_coefficient, top_productive_sequence) %>% 
             pivot_longer(!repertoire_id,
                         names_to = "metric",
@@ -668,11 +709,11 @@ server <- function(input, output, session) {
     })
 
     clone_plot_data <- reactive({
-        data_output <- ggplot(data = itable(), aes(x = repertoire_id, y = clonality)) +
+        data_output <- ggplot(data = clonality_data(), aes(x = repertoire_id, y = clonality)) +
             geom_bar(stat = "identity", position=position_dodge(), fill = "#b2182b") +
             theme_minimal() +
             theme(axis.text.x  = element_text(angle=90, vjust=0.5, hjust = 1), text = element_text(size = 10)) +
-            scale_x_discrete(limits = itable()$repertoire_id) +
+            scale_x_discrete(limits = clonality_data()$repertoire_id) +
             labs(x = "", y = "Clonality")
         data_output
     })
@@ -798,16 +839,21 @@ server <- function(input, output, session) {
         }
     })
 
+    observeEvent(input$track_button, {
+        shinyjs::enable("download")
+        shinyjs::show("clone_track")
+    })
+
     clone_track_data <- reactive({
         if (input$top_clones == "yes") {
             validate(
                 need(input$top_num > 0, "Please enter a number for tracking top clones")
             )
-            ttable <- LymphoSeqTest::topSeqs(productive_aa(), top = input$top_num)
-            ctable <- LymphoSeqTest::cloneTrack(ttable, sample_list = input$track_id)
+            ttable <- LymphoSeq2::topSeqs(productive_aa(), top = input$top_num)
+            ctable <- LymphoSeq2::cloneTrack(ttable, sample_list = input$track_id)
 
         } else {
-            ctable <- LymphoSeqTest::cloneTrack(productive_aa(), sample_list = input$track_id)
+            ctable <- LymphoSeq2::cloneTrack(productive_aa(), sample_list = input$track_id)
         }
         # max_seen <- ctable %>%
         #     pull(seen) %>%
@@ -818,8 +864,8 @@ server <- function(input, output, session) {
         #      unique()
         # top_seen <- ctable %>%
         #     slice_max(seen, n = 100)
-        # p <- LymphoSeqTest::plotTrack(clone_table = top_seen, alist = max_amino)
-        LymphoSeqTest::plotTrack(clone_table = ctable)
+        # p <- LymphoSeq2::plotTrack(clone_table = top_seen, alist = max_amino)
+        LymphoSeq2::plotTrack(clone_table = ctable)
     })
 
     output$clone_track <- renderPlot({
@@ -838,21 +884,22 @@ server <- function(input, output, session) {
     )
 
     pairwise_sim_data <- reactive({
-        similarity <- LymphoSeqTest::scoringMatrix(productive_aa(), mode = input$mode)
+        similarity <- LymphoSeq2::scoringMatrix(productive_aa(), mode = input$mode)
         data_output <- pairwisePlot(matrix = similarity) +
             labs(fill = paste(input$mode, "\ncoefficient")) +
             theme(legend.title = element_text(size = 8), legend.text = element_text(size = 8)) +
             scale_fill_gradient(low = "#deebf7", high = "#3182bd") +
             theme(legend.position = c(0.8, 0.8))
         data_output
-    })
+    }) 
 
     output$pairwise_sim <- renderPlotly({
         plotly::ggplotly(pairwise_sim_data())
-    })
+    }) %>%
+    bindCache(productive_aa(), input$mode)
 
     public_table_data <- reactive({
-        published <- LymphoSeqTest::searchPublished(productive_aa())
+        published <- LymphoSeq2::searchPublished(productive_aa())
         data_output <- published %>%
             filter(!is.na(PMID)) %>%
             select(repertoire_id, junction_aa, duplicate_count, antigen, prevalence)
@@ -867,7 +914,7 @@ server <- function(input, output, session) {
     })
 
     gene_heatmap_data <- reactive({
-        genes <- LymphoSeqTest::geneFreq(productive_nt(), locus = input$locus, family = input$family_bool) %>% 
+        genes <- LymphoSeq2::geneFreq(productive_nt(), locus = input$locus, family = input$family_bool) %>% 
             pivot_wider(id_cols = gene_name,
                         names_from = repertoire_id,
                         values_from = gene_frequency,
@@ -883,11 +930,12 @@ server <- function(input, output, session) {
     })
 
     output$gene_freq_heat <- renderPlotly({
-        heatmaply::heatmaply(gene_heatmap_data(), colors = "RdBu", scale = "row")
-    })
+        heatmaply::heatmaply(gene_heatmap_data(), scale = "row", fontsize_row = 6)
+    }) %>%
+    bindCache(gene_heatmap_data())
 
     gene_bar_data <- reactive({
-        genes <- LymphoSeqTest::geneFreq(productive_nt(), input$locus, input$family_bool)
+        genes <- LymphoSeq2::geneFreq(productive_nt(), input$locus, input$family_bool)
         data_output <<- ggplot(genes, aes(x = repertoire_id, y = gene_frequency, fill = gene_name)) +
             geom_bar(stat = "identity") +
             theme_minimal() + 
@@ -900,7 +948,8 @@ server <- function(input, output, session) {
     
     output$gene_freq_bar <- renderPlotly({
         plotly::ggplotly(gene_bar_data())
-    })
+    }) %>% 
+    bindCache(gene_bar_data())
 
     observeEvent(input$word_button, {
         shinyjs::enable("download")
@@ -908,7 +957,7 @@ server <- function(input, output, session) {
     })
 
     gene_word_data <- reactive({
-        genes <- LymphoSeqTest::geneFreq(productive_nt(), input$locus, input$family_bool)
+        genes <- LymphoSeq2::geneFreq(productive_nt(), input$locus, input$family_bool)
         gene_data <- genes %>%
                         filter(repertoire_id == input$word_id)
         gene_data <- data.frame(gene_data$gene_name, gene_data$gene_frequency)
@@ -921,11 +970,12 @@ server <- function(input, output, session) {
         isolate ({
             gene_word_data()
         })
-    })
+    }) %>%
+    bindCache(gene_word_data()) %>%
+    bindEvent(input$word_button)
 
     gene_table_data <- reactive({
-        data_output <- LymphoSeqTest::geneFreq(productive_nt(), input$locus, input$family_bool)
-        data_output
+        LymphoSeq2::geneFreq(productive_nt(), input$locus, input$family_bool)
     })
 
     output$gene_freq_table <- DT::renderDataTable({
@@ -938,7 +988,7 @@ server <- function(input, output, session) {
     })
 
     diff_table_data <- reactive({
-        LymphoSeqTest::differentialAbundance(productive_aa(),
+        LymphoSeq2::differentialAbundance(productive_aa(),
                         input$diff_id, q = input$q_val, zero = input$zero_val)
     })
 
@@ -953,14 +1003,14 @@ server <- function(input, output, session) {
     })
 
     kmer_table_data <- reactive({
-        LymphoSeqTest::countKmer(airr_data(), input$k_val)
+        LymphoSeq2::countKmer(airr_data(), input$k_val)
     })
 
     output$count_kmers <- DT::renderDataTable({
         input$kmer_button
         isolate({
             validate(
-                need(input$k_val > 2, "Please input length of at least 2")
+                need(input$k_val > 1, "Please input length of at least 2")
             )
             kmer_table_data()
         })
@@ -972,7 +1022,8 @@ server <- function(input, output, session) {
         },
         content <- function(file) {
             if (input$download_type == ".pdf") {
-                pdf(file)
+                pdf(file, width = 11, height = 8.5)
+
                 if (input$tabselected == "gene_panel") {
                     if (input$gene_sub_tab == "gene_freq_heat") {
                         RedBlue <- grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(256)
@@ -981,8 +1032,10 @@ server <- function(input, output, session) {
                     } else if (input$gene_sub_tab == "gene_freq_bar") {
                         plot(gene_bar_data())
                     }
+
                 } else if (input$tabselected == "chord_diagram") {
                     circlize::chordDiagram(chord_data(), annotationTrack = c("grid", "name"))
+
                 } else if (input$tabselected == "common_panel") {
                     if (input$common_sub_tab == "common_bar") {
                         print(common_bar_data())
@@ -992,16 +1045,20 @@ server <- function(input, output, session) {
                     } else if (input$common_sub_tab == "common_plot") {
                         plot(common_seqs_plot())
                     }
+                } else if (input$tabselected == "prod_seq_panel") {
+                    if (input$prod_seq_sub_tab == "produtive_seq_plot") {
+                        plot(prod_plot_data())
+                    } else if (input$prod_seq_sub_tab == "top_seq_plot") {
+                        plot(top_seq_data())
+                    }
+                
                 } else if (input$tabselected == "clonality_plot") {
                     plot(clone_plot_data())
                 } else if (input$tabselected == "lorenz_curve") {
                     plot(lorenz_data())
-                } else if (input$tabselected == "top_10_seq_plot") {
-                    plot(top_seq_data())
                 } else if (input$tabselected == "pairwise_sim") {
-                    plot(pairwise_sim_data())
-                } else if (input$tabselected == "prod_seq_panel" && input$prod_seq_sub_tab == "produtive_seq_plot") {
-                    plot(prod_plot_data())
+                    plot(pairwise_sim_data() + ggplot2::geom_text(aes(label = sprintf("%0.2f", round(score, digits = 2)))) 
+                                            + ggfittext::geom_fit_text())
                 } else if (input$tabselected == "clone_track") {
                     plot(clone_track_data())
                 }
@@ -1011,22 +1068,22 @@ server <- function(input, output, session) {
                     data_output <- airr_data()
                 } else if (input$tabselected == "common_panel" && input$common_sub_tab == "common_seq_table") {
                     data_output <- common_table_data()
-                } else if (input$tabselected == "prod_seq_panel" && input$prod_seq_sub_tab == "top_10_seq_table") {
+                } else if (input$tabselected == "prod_seq_panel" && input$prod_seq_sub_tab == "top_seq_table") {
                     data_output <- top_prod_seq_data()
                 } else if (input$tabselected == "gene_panel" && input$gene_sub_tab == "gene_freq_table") {
                     data_output <- gene_table_data()
                 } else if (input$tabselected == "clonality_panel") {
                     if (input$clonal_sub_tab == "clonality") {
-                        data_output <- clone_table_data()
+                        data_output <- clonality_data()
                     } else if (input$clonal_sub_tab == "clonal_relate") {
                         data_output <- clone_relate_data()
                     } else if (input$clonal_sub_tab == "clonality_stats") {
                         data_output <- clone_stats_data()
+                    } else if (input$tabselected == "seq_counts") {
+                        data_output <- seq_count_data()
+                    } else if (input$tabselected == "count_stats") {
+                        data_output <- stats_count_data()
                     }
-                } else if (input$tabselected == "seq_counts") {
-                    data_output <- seq_count_data()
-                } else if (input$tabselected == "count_stats") {
-                    data_output <- stats_count_data()
                 } else if (input$tabselected == "public_tcrb_seq") {
                     data_output <- public_table_data()
                 } else if (input$tabselected == "count_kmers") {
