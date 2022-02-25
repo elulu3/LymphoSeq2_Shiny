@@ -18,7 +18,7 @@ library(wordcloud2)
 library(webshot)
 library(htmlwidgets)
 
-options(shiny.maxRequestSize = 50 * 1024^2)
+options(shiny.maxRequestSize = 100 * 1024^2)
 
 ui <- 
 navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean"),
@@ -184,8 +184,8 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                 tabPanel("Clone Tracking", value = "clone_track", tags$div(
                         style = "position: relative;",
                         plotOutput("clone_track",
-                        hover = hoverOpts(id = "clone_track_hover")),
-                        htmlOutput("clone_track_tooltip")) %>% withSpinner()),
+                        hover = hoverOpts(id = "clone_track_hover")) %>% withSpinner(),
+                        htmlOutput("clone_track_tooltip"))),
                 tabPanel("Pairwise Similarity", value = "pairwise_sim",
                         plotlyOutput("pairwise_sim") %>% withSpinner()),
                 tabPanel("Public TCRB Sequences", value = "public_tcrb_seq",
@@ -203,6 +203,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
     tabPanel("About",
         fluidPage(
             tags$h2("More about the LymphoSeq2 package here:", style = "font-size:30px"),
+            tags$br(),
             tags$a(href = "https://shashidhar22.github.io/LymphoSeq2/", "LymphoSeq2 Package Website", style = "font-size:20px"),
             tags$br(), tags$br(),
             tags$a(href = "https://github.com/shashidhar22/LymphoSeq2", "LymphoSeq2 on Github", style = "font-size:20px")
@@ -225,20 +226,27 @@ server <- function(input, output, session) {
             need(!is.null(input$airr_files),
                     "Please select files to upload to render output.")
         )
-        if (tools::file_ext(input$airr_files$name) == "tsv") {
-            rda_envir <<- NULL
-            table <- LymphoSeq2::readImmunoSeq(input$airr_files$datapath)
-            in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
-            in_files <- unlist(in_files)
-            table <- table %>%
-                    mutate(repertoire_id = if_else(as.integer(repertoire_id) <= length(in_files),
-                            in_files[as.integer(repertoire_id) + 1], "unknown"))
-            table
-        } else {
-            rda_envir <<- new.env()
-            name <- load(input$airr_files$datapath, envir = rda_envir)
-            rda_envir$airr_table
-        }
+        tryCatch({
+            if (tools::file_ext(input$airr_files$name) == "tsv") {
+                rda_envir <<- NULL
+                table <- LymphoSeq2::readImmunoSeq(input$airr_files$datapath)
+                in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
+                in_files <- unlist(in_files)
+                table <- table %>%
+                        mutate(repertoire_id = if_else(as.integer(repertoire_id) <= length(in_files),
+                                in_files[as.integer(repertoire_id) + 1], "unknown"))
+                table
+            } else if (tools::file_ext(input$airr_files$name) == "RData") {
+                rda_envir <<- new.env()
+                name <- load(input$airr_files$datapath, envir = rda_envir)
+                rda_envir$airr_table
+            }
+        },
+            error = function(e) {
+                shiny::showNotification("Cannot convert data. Please choose other files.", "", type = "error")
+                return()
+            }
+        )
     })
 
     output$table <- DT::renderDataTable({
@@ -927,7 +935,9 @@ server <- function(input, output, session) {
                 need(length(input$track_id) > 0, "Please select repertoire ids to track")
             )
             interactive_alluvial(clone_track_data())
-            clone_track_data() + geom_text(stat = "alluvium") #+ theme(legend.position = "none")
+            clone_track_data() #+ 
+                # geom_label(stat = "stratum", aes(label = after_stat(stratum))) +
+                # theme(legend.position = "right")
         })
     })
 
@@ -1134,11 +1144,21 @@ server <- function(input, output, session) {
             }
 
             if (input$download_type == ".RData") {
-                airr_table <- airr_data()
-                prod_aa <- productive_aa()
-                prod_nt <- productive_nt()
-                clone_data <- clonality_data()
-                save(data_output, airr_table, prod_aa, prod_nt, clone_data, file = file)
+                shiny::withProgress(
+                    message = "This make take a few minutes...",
+                    {
+                        airr_table <- airr_data()
+                        prod_aa <- productive_aa()
+                        prod_nt <- productive_nt()
+                        clone_data <- clonality_data()
+                        save(data_output, airr_table, prod_aa, prod_nt, clone_data, file = file)
+                    }
+                )
+                # airr_table <- airr_data()
+                # prod_aa <- productive_aa()
+                # prod_nt <- productive_nt()
+                # clone_data <- clonality_data()
+                # save(data_output, airr_table, prod_aa, prod_nt, clone_data, file = file)
 
             } else if (input$download_type == ".pdf") {
                 pdf(file, width = 11, height = 8.5)
