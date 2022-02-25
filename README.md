@@ -43,7 +43,7 @@ These packages will also need to be installed under special instructions:
    ```
 3. chorddiag
    
-   The **chordiagg** package may be incomaptible with the newer versions of R. If this is the case, the package will need to be installed directly from Github  
+   The **chordiagg** package may be incomaptible with newer versions of R. If this is the case, the package will need to be installed directly from Github  
    the `devtools` package:
    ```
    devtools::install_github("mattflor/chorddiag", build_vignettes = TRUE)
