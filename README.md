@@ -29,7 +29,7 @@ These packages will also need to be installed under special instructions:
    # install the devtools package
    install.packages("devtools")
 
-   devtools::install_github("shashidhar22/LymphoSeq2", build_vignette=TRUE)
+   devtools::install_github("shashidhar22/LymphoSeq2", build_vignette=FALSE)
    ```
 
 2. ggalluvial
@@ -37,7 +37,7 @@ These packages will also need to be installed under special instructions:
    This application uses the development version of **ggalluvial** and needs to be installed from Github using the following code:
    ```
    # install the remotes package
-   install.packages("remotes)
+   install.packages("remotes")
   
    remotes::install_github("corybrunson/ggalluvial@main", build_vignettes = FALSE)
    ```
