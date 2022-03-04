@@ -20,6 +20,9 @@ library(htmlwidgets)
 
 options(shiny.maxRequestSize = 100 * 1024^2)
 
+    e <- new.env()
+    data <- load("ufiftyfour.rda", envir = e)
+
 ui <- 
 navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean"),
     tabPanel("Explore Data",
@@ -221,32 +224,36 @@ server <- function(input, output, session) {
     shinyjs::disable("top_chord_num")
     rda_envir <<- NULL
 
+    # e <- new.env()
+    # data <- load("ufiftyfour.rda", envir = e)
+
     airr_data <- reactive({
-        validate(
-            need(!is.null(input$airr_files),
-                    "Please select files to upload to render output.")
-        )
-        tryCatch({
-            if (tools::file_ext(input$airr_files$name) == "tsv") {
-                rda_envir <<- NULL
-                table <- LymphoSeq2::readImmunoSeq(input$airr_files$datapath)
-                in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
-                in_files <- unlist(in_files)
-                table <- table %>%
-                        mutate(repertoire_id = if_else(as.integer(repertoire_id) <= length(in_files),
-                                in_files[as.integer(repertoire_id) + 1], "unknown"))
-                table
-            } else if (tools::file_ext(input$airr_files$name) == "RData") {
-                rda_envir <<- new.env()
-                name <- load(input$airr_files$datapath, envir = rda_envir)
-                rda_envir$airr_table
-            }
-        },
-            error = function(e) {
-                shiny::showNotification("Cannot convert data. Please choose other files.", "", type = "error")
-                return()
-            }
-        )
+        e$study_table
+        # validate(
+        #     need(!is.null(input$airr_files),
+        #             "Please select files to upload to render output.")
+        # )
+        # tryCatch({
+        #     if (tools::file_ext(input$airr_files$name) == "tsv") {
+        #         rda_envir <<- NULL
+        #         table <- LymphoSeq2::readImmunoSeq(input$airr_files$datapath)
+        #         in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
+        #         in_files <- unlist(in_files)
+        #         table <- table %>%
+        #                 mutate(repertoire_id = if_else(as.integer(repertoire_id) <= length(in_files),
+        #                         in_files[as.integer(repertoire_id) + 1], "unknown"))
+        #         table
+        #     } else if (tools::file_ext(input$airr_files$name) == "RData") {
+        #         rda_envir <<- new.env()
+        #         name <- load(input$airr_files$datapath, envir = rda_envir)
+        #         rda_envir$airr_table
+        #     }
+        # },
+        #     error = function(e) {
+        #         shiny::showNotification("Cannot convert data. Please choose other files.", "", type = "error")
+        #         return()
+        #     }
+        # )
     })
 
     output$table <- DT::renderDataTable({
@@ -254,19 +261,21 @@ server <- function(input, output, session) {
     })
 
     productive_aa <- reactive({
-        if (is.null(rda_envir)) {
-            LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
-        } else {
-            rda_envir$prod_aa
-        }
+        # if (is.null(rda_envir)) {
+        #     LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
+        # } else {
+            e$amino_table
+            # rda_envir$prod_aa
+        # }
     })
 
     productive_nt <- reactive({
-        if (is.null(rda_envir)) {
-            LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction")
-        } else {
-            rda_envir$prod_nt
-        }
+        # if (is.null(rda_envir)) {
+        #     LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction")
+        # } else {
+            e$nucleotide_table
+            # rda_envir$prod_nt
+        # }
     })
 
     unique_prod_rep <- reactive({
@@ -274,11 +283,12 @@ server <- function(input, output, session) {
     })
 
     clonality_data <- reactive({
-        if (is.null(rda_envir)) {
-            LymphoSeq2::clonality(airr_data())
-        } else {
-            rda_envir$clone_data
-        }
+        # if (is.null(rda_envir)) {
+        #     LymphoSeq2::clonality(airr_data())
+        # } else {
+            # rda_envir$clone_data
+        # }
+        e$summary_table
     })
 
     observeEvent(input$airr_files, {
