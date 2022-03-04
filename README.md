@@ -4,7 +4,7 @@ LymphoSeq2_Shiny is an interactive web application of [LymphoSeq2](https://githu
 
 ## Required Packages
 
-The following packages are used by LymphoSeq2_Shiny and will need to be installed (if not already) before running the application: 
+The following packages are used by LymphoSeq2_Shiny and will need to be installed through the R console (if not already) before running the application: 
 
 1. shiny
 2. shinyjs
@@ -26,27 +26,32 @@ These packages will also need to be installed under special instructions:
    
    The **LymphoSeq2** package can be installed from Github:
    ```
-   # install the devtools package
+   # install the devtools package first (if not already)
    install.packages("devtools")
+   
+   # load devtools package
+   library(devtools)
 
-   devtools::install_github("shashidhar22/LymphoSeq2", build_vignette=FALSE)
+   devtools::install_github("shashidhar22/LymphoSeq2", build_vignette = FALSE)
    ```
 
 2. ggalluvial
   
    This application uses the development version of **ggalluvial** and needs to be installed from Github using the following code:
    ```
-   # install the remotes package
+   # install the remotes package first (if not already)
    install.packages("remotes")
+   
+   # load remotes package
+   library(remotes)
   
    remotes::install_github("corybrunson/ggalluvial@main", build_vignettes = FALSE)
    ```
 3. chorddiag
    
-   The **chordiagg** package may be incomaptible with newer versions of R. If this is the case, the package will need to be installed directly from Github  
-   the `devtools` package:
+   The **chordiagg** package may be incomaptible with newer versions of R. If this is the case, the package will need to be installed directly from Github using the `devtools` package:
    ```
-   devtools::install_github("mattflor/chorddiag", build_vignettes = TRUE)
+   devtools::install_github("mattflor/chorddiag", build_vignettes = FALSE)
    ```
 
 ## Running the Application
@@ -54,10 +59,10 @@ These packages will also need to be installed under special instructions:
 The **Shiny** package must first be loaded into the R session. Then, to start the application, simply call Shiny's `runApp` function.
 
 ```
-# Load the Shiny package
+# load the Shiny package
 library(shiny)
 
-# Run the application
-runApp("LymphoSeq2_app")
+# run the application (assuming current directory is LymphoSeq2_Shiny)
+runApp("LymphoSeq2_app/")
 
 ```
