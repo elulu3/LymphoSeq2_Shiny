@@ -157,8 +157,8 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                                     plotlyOutput("gene_freq_heat") %>% withSpinner()),
                                 tabPanel("Bar Chart", value = "gene_freq_bar",
                                     plotlyOutput("gene_freq_bar") %>% withSpinner()),
-                                tabPanel("Word Cloud", value = "gene_freq_word",
-                                    wordcloud2Output("gene_freq_word") %>% withSpinner()),
+                                # tabPanel("Word Cloud", value = "gene_freq_word",
+                                #     wordcloud2Output("gene_freq_word") %>% withSpinner()),
                                 id = "gene_sub_tab"
                             )),
                 tabPanel("Explore Clonality", value = "clonality_panel",
