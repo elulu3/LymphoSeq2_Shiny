@@ -15,10 +15,10 @@ library(writexl)
 library(shinyjs)
 library(wordcloud2)
 
-options(shiny.maxRequestSize = 100 * 1024^2)
+options(shiny.maxRequestSize = 500 * 1024^2)
 
-    e <- new.env()
-    data <- load("ufiftyfour.rda", envir = e)
+    # e <- new.env()
+    # data <- load("ufiftyfour.rda", envir = e)
 
 ui <- 
 navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean"),
@@ -225,32 +225,32 @@ server <- function(input, output, session) {
     # data <- load("ufiftyfour.rda", envir = e)
 
     airr_data <- reactive({
-        e$study_table
-        # validate(
-        #     need(!is.null(input$airr_files),
-        #             "Please select files to upload to render output.")
-        # )
-        # tryCatch({
-        #     if (tools::file_ext(input$airr_files$name) == "tsv") {
-        #         rda_envir <<- NULL
-        #         table <- LymphoSeq2::readImmunoSeq(input$airr_files$datapath)
-        #         in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
-        #         in_files <- unlist(in_files)
-        #         table <- table %>%
-        #                 mutate(repertoire_id = if_else(as.integer(repertoire_id) <= length(in_files),
-        #                         in_files[as.integer(repertoire_id) + 1], "unknown"))
-        #         table
-        #     } else if (tools::file_ext(input$airr_files$name) == "RData") {
-        #         rda_envir <<- new.env()
-        #         name <- load(input$airr_files$datapath, envir = rda_envir)
-        #         rda_envir$airr_table
-        #     }
-        # },
-        #     error = function(e) {
-        #         shiny::showNotification("Cannot convert data. Please choose other files.", "", type = "error")
-        #         return()
-        #     }
-        # )
+        # e$study_table
+        validate(
+            need(!is.null(input$airr_files),
+                    "Please select files to upload to render output.")
+        )
+        tryCatch({
+            if (tools::file_ext(input$airr_files$name) == "tsv") {
+                rda_envir <<- NULL
+                table <- LymphoSeq2::readImmunoSeq(input$airr_files$datapath)
+                in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
+                in_files <- unlist(in_files)
+                table <- table %>%
+                        mutate(repertoire_id = if_else(as.integer(repertoire_id) <= length(in_files),
+                                in_files[as.integer(repertoire_id) + 1], "unknown"))
+                table
+            } else if (tools::file_ext(input$airr_files$name) == "rda") {
+                rda_envir <<- new.env()
+                name <- load(input$airr_files$datapath, envir = rda_envir)
+                rda_envir$study_table
+            }
+        },
+            error = function(e) {
+                shiny::showNotification("Cannot convert data. Please choose other files.", "", type = "error")
+                return()
+            }
+        )
     })
 
     output$table <- DT::renderDataTable({
@@ -258,21 +258,21 @@ server <- function(input, output, session) {
     })
 
     productive_aa <- reactive({
-        # if (is.null(rda_envir)) {
-        #     LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
-        # } else {
-            e$amino_table
-            # rda_envir$prod_aa
-        # }
+        if (is.null(rda_envir)) {
+            LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
+        } else {
+        #     e$amino_table
+            rda_envir$amino_table
+        }
     })
 
     productive_nt <- reactive({
-        # if (is.null(rda_envir)) {
-        #     LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction")
-        # } else {
-            e$nucleotide_table
-            # rda_envir$prod_nt
-        # }
+        if (is.null(rda_envir)) {
+            LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction")
+        } else {
+            # e$nucleotide_table
+            rda_envir$nucleotide_table
+        }
     })
 
     unique_prod_rep <- reactive({
@@ -280,11 +280,11 @@ server <- function(input, output, session) {
     })
 
     clonality_data <- reactive({
-        # if (is.null(rda_envir)) {
-        #     LymphoSeq2::clonality(airr_data())
-        # } else {
-            # rda_envir$clone_data
-        # }
+        if (is.null(rda_envir)) {
+            LymphoSeq2::clonality(airr_data())
+        } else {
+            rda_envir$summary_table
+        }
         e$summary_table
     })
 
@@ -343,12 +343,12 @@ server <- function(input, output, session) {
                 input$tabselected == "prod_seq_panel" && (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") ||
                 input$tabselected == "clonality_panel" && input$clonal_sub_tab != "clonality_plot" ||
                 input$tabselected == "gene_panel" && input$gene_sub_tab == "gene_freq_table") {
-            download_choices <- c("TSV" = ".tsv", "EXCEL" = ".xlsx", "Rda" = ".RData")
+            download_choices <- c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda")
             if (length(input$airr_files) > 0) {
                 shinyjs::enable("download")
             }
         } else {
-            download_choices <- c("PDF" = ".pdf", "Rda" = ".RData")
+            download_choices <- c("PDF" = ".pdf", "RData" = ".rda")
         }
         shiny::updateRadioButtons(session, "download_type", choices = download_choices)
         if (input$tabselected == "diff_abundance") {
@@ -370,9 +370,9 @@ server <- function(input, output, session) {
     observeEvent(input$common_sub_tab, {
         if (input$common_sub_tab == "common_seq_table") {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "Rda" = ".RData"))
+                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
         } else {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "Rda" = ".RData"))
+            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
         }
         update_common_tabs()
     })
@@ -385,28 +385,28 @@ server <- function(input, output, session) {
     observeEvent(input$gene_sub_tab, {
         if (input$gene_sub_tab == "gene_freq_table") {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "Rda" = ".RData"))
+                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
         } else {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "Rda" = ".RData"))
+            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
         }
         update_gene_tabs()
     })
 
     observeEvent(input$clonal_sub_tab, {
         if (input$clonal_sub_tab == "clonality_plot") {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "Rda" = ".RData"))
+            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
         } else {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "Rda" = ".RData"))
+                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
         }
     })
 
     observeEvent(input$prod_seq_sub_tab, {
         if (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "Rda" = ".RData"))
+                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
         } else {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "Rda" = ".RData"))
+            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
         }
     })
 
@@ -1150,7 +1150,7 @@ server <- function(input, output, session) {
                 data_output <- diff_table_data()
             }
 
-            if (input$download_type == ".RData") {
+            if (input$download_type == ".rda") {
                 shiny::withProgress(
                     message = "This make take a few minutes...",
                     {
