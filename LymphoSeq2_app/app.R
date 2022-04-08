@@ -216,16 +216,11 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
 
 server <- function(input, output, session) {
 
-    # shinyjs::disable("download")
     shinyjs::disable("top_num")
     shinyjs::disable("top_chord_num")
     rda_envir <<- NULL
 
-    # e <- new.env()
-    # data <- load("ufiftyfour.rda", envir = e)
-
     airr_data <- reactive({
-        # e$study_table
         validate(
             need(!is.null(input$airr_files),
                     "Please select files to upload to render output.")
@@ -254,14 +249,16 @@ server <- function(input, output, session) {
     })
 
     output$table <- DT::renderDataTable({
-        airr_data() %>% purrr::discard(~all(is.na(.) | . == ""))
+        airr_table <- airr_data() %>%
+                        purrr::discard(~all(is.na(.) | . == "")) %>%
+                        DT::datatable(filter = "top", options = list(scrollX = TRUE))
+
     })
 
     productive_aa <- reactive({
         if (is.null(rda_envir)) {
             LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
         } else {
-        #     e$amino_table
             rda_envir$amino_table
         }
     })
@@ -270,7 +267,6 @@ server <- function(input, output, session) {
         if (is.null(rda_envir)) {
             LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction")
         } else {
-            # e$nucleotide_table
             rda_envir$nucleotide_table
         }
     })
@@ -285,7 +281,6 @@ server <- function(input, output, session) {
         } else {
             rda_envir$summary_table
         }
-        e$summary_table
     })
 
     observeEvent(input$airr_files, {
@@ -306,13 +301,6 @@ server <- function(input, output, session) {
             shinyjs::hide("top_seq_table")
             shinyjs::hide("top_seq_plot")
         }
-        # if (input$tabselected == "chord_diagram" || input$common_sub_tab == "common_venn" ||
-        #         input$common_sub_tab == "common_bar" || input$common_sub_tab == "common_plot" ||
-        #         input$tabselected == "diff_abundance") {
-        #     shinyjs::disable("download")
-        # } else {
-        #     shinyjs::enable("download")
-        # }
         if (input$tabselected == "common_panel" || input$tabselected == "diff_abundance" ||
                 input$tabselected == "clone_track") {
             shiny::updateSelectizeInput(session, "common_table_id", choices = unique_prod_rep())
@@ -411,7 +399,6 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$chord_button, {
-        # shinyjs::enable("download")
         shinyjs::show("chord_diagram")
     })
 
@@ -517,7 +504,6 @@ server <- function(input, output, session) {
                 common_bar_data()
                 },
                 error = function(e) {
-                    # shinyjs::disable("download")
                     shiny::showNotification("Cannot render plot", "", type = "error")
                     return()
                 }
@@ -544,7 +530,6 @@ server <- function(input, output, session) {
             if (nrow(common_seqs_plot()$data) > 0) {
                 common_seqs_plot()
             } else {
-                # shinyjs::disable("download")
                 shiny::showNotification("No common sequences", "", type = "error")
                 return()
             }
@@ -553,7 +538,6 @@ server <- function(input, output, session) {
 
     observeEvent(input$venn_button, {
         shinyjs::show("commonSeqs_venn")
-        # shinyjs::enable("download")
     })
 
     common_venn_data <- reactive({
@@ -695,7 +679,6 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$top_seq_button, {
-        # shinyjs::enable("download")
         shinyjs::show("top_seq_table")
         shinyjs::show("top_seq_plot")
     })
@@ -754,7 +737,6 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$clonal_relate_button, {
-        # shinyjs::enable("download")
         shinyjs::show("clonal_relate")
     })
 
@@ -915,7 +897,6 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$track_button, {
-        # shinyjs::enable("download")
         shinyjs::show("clone_track")
     })
 
@@ -1045,7 +1026,6 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$diff_button, {
-        # shinyjs::enable("download")
         shinyjs::show("diff_abundance")
     })
 
