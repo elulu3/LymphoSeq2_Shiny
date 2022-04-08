@@ -17,8 +17,6 @@ library(wordcloud2)
 
 options(shiny.maxRequestSize = 500 * 1024^2)
 
-    # e <- new.env()
-    # data <- load("ufiftyfour.rda", envir = e)
 
 ui <- 
 navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean"),
@@ -629,9 +627,12 @@ server <- function(input, output, session) {
 
     output$seq_count <- DT::renderDataTable({
         seq_count_data() %>%
-            datatable(rownames = FALSE, colnames = c("Repertoire ID",
-                        "Total Sequences", "Unique Productive Sequences",
-                        "Total Count"), filter = "top")
+            DT::datatable(rownames = FALSE,
+                        colnames = c("Repertoire ID",
+                            "Total Sequences", "Unique Productive Sequences",
+                            "Total Count"),
+                        filter = "top",
+                        options = list(scrollX = TRUE))
     })
 
     stats_count_data <- reactive({
@@ -653,8 +654,12 @@ server <- function(input, output, session) {
     })
 
     output$stats_count <- DT::renderDataTable({
-        datatable(stats_count_data(), rownames = FALSE, colnames = c("Metric", "Total",
-                    "Mean", "Minimum", "Maximum"), filter = "top")
+        stats_count_data() %>%
+            DT::datatable(rownames = FALSE,
+                            colnames = c("Metric", "Total",
+                                "Mean", "Minimum", "Maximum"),
+                            filter = "top",
+                            options = list(scrollX = TRUE))
     })
 
     prod_plot_data <- reactive({
@@ -675,7 +680,8 @@ server <- function(input, output, session) {
     })
 
     output$produtive_seq_table <- DT::renderDataTable({
-        datatable(unique_prod_data(), filter = "top")
+        unique_prod_data() %>%
+            DT::datatable(filter = "top", options = list(scrollX = TRUE))
     })
 
     observeEvent(input$top_seq_button, {
@@ -696,7 +702,8 @@ server <- function(input, output, session) {
                 need(input$top_seq_num > 0, "Please choose number of top sequences.")
             )
             top_prod_seq_data() %>%
-                datatable(rownames = FALSE, filter = "top")
+                DT::datatable(rownames = FALSE, filter = "top",
+                            options = list(scrollX = TRUE))
         })
     })
 
@@ -720,12 +727,14 @@ server <- function(input, output, session) {
     })
 
     output$common_seq_table <- DT::renderDataTable({
-        common_table_data()
+        common_table_data() %>%
+            DT::datatable(filter = "top", options = list(scrollX = TRUE))
     })
 
     output$clonality <- DT::renderDataTable({
         clonality_data() %>%
-            datatable(rownames = FALSE, filter = "top")
+            DT::datatable(rownames = FALSE, filter = "top",
+                            options = list(scrollX = TRUE))
     })
 
     clone_relate_data <- reactive({
@@ -743,7 +752,8 @@ server <- function(input, output, session) {
     output$clonal_relate <- DT::renderDataTable({
         input$clonal_relate_button
         isolate({
-            clone_relate_data()
+            clone_relate_data() %>%
+                DT::datatable(filter = "top", options = list(scrollX = TRUE))
         })
     })
 
@@ -764,7 +774,10 @@ server <- function(input, output, session) {
 
     output$clonality_stats <- DT::renderDataTable({
         clone_stats_data() %>%
-            datatable(rownames = FALSE, colnames = c("Metric", "Mean", "Minimum", "Maximum"), filter = "top")
+            DT::datatable(rownames = FALSE,
+                            colnames = c("Metric", "Mean", "Minimum", "Maximum"),
+                            filter = "top",
+                            options = list(scrollX = TRUE))
     })
 
     clone_plot_data <- reactive({
@@ -955,7 +968,7 @@ server <- function(input, output, session) {
 
     output$public_tcrb <- DT::renderDataTable({
         public_table_data() %>%
-                datatable(filter = "top")
+                DT::datatable(filter = "top", options = list(scrollX = TRUE))
     })
 
     gene_heatmap_data <- reactive({
@@ -1022,7 +1035,8 @@ server <- function(input, output, session) {
     })
 
     output$gene_freq_table <- DT::renderDataTable({
-        gene_table_data()
+        gene_table_data() %>%
+            DT::datatable(filter = "top", options = list(scrollX = TRUE))
     })
 
     observeEvent(input$diff_button, {
@@ -1040,7 +1054,8 @@ server <- function(input, output, session) {
             need(length(input$diff_id) == 2, "Please select 2 repertoire ids")
         )
         isolate({
-            diff_table_data()
+            diff_table_data() %>%
+                DT::datatable(filter = "top", options = list(scrollX = TRUE))
         })
     })
 
@@ -1054,7 +1069,8 @@ server <- function(input, output, session) {
             validate(
                 need(input$k_val > 1, "Please input length of at least 2")
             )
-            kmer_table_data()
+            kmer_table_data() %>%
+                DT::datatable(filter = "top", options = list(scrollX = TRUE))
         })
     })
 
