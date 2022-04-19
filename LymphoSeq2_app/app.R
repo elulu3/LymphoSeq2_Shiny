@@ -293,28 +293,30 @@ server <- function(input, output, session) {
                 input$plot_button || input$diff_button || input$track_button ||
                 input$clonal_relate_button || input$word_button || input$kmer_button ||
                 input$top_seq_button) {
-            shinyjs::hide("chord_diagram")
-            shinyjs::hide("commonSeqs_venn")
-            shinyjs::hide("commonSeqs_bar")
-            shinyjs::hide("commonSeqs_plot")
-            shinyjs::hide("diff_abundance")
-            shinyjs::hide("gene_freq_word")
-            shinyjs::hide("clonal_relate")
-            shinyjs::hide("clone_track")
-            shinyjs::hide("count_kmers")
-            shinyjs::hide("top_seq_table")
-            shinyjs::hide("top_seq_plot")
+            purrr::map(c("chord_diagram", "commonSeqs_venn", "commonSeqs_bar",
+                            "commonSeqs_plot", "diff_abundance", "gene_freq_word",
+                            "clonal_relate", "clone_track", "count_kmers",
+                            "top_seq_table", "top_deq_plot"),
+                    function(x) shinyjs::hide(x))
+            # shinyjs::hide("chord_diagram")
+            # shinyjs::hide("commonSeqs_venn")
+            # shinyjs::hide("commonSeqs_bar")
+            # shinyjs::hide("commonSeqs_plot")
+            # shinyjs::hide("diff_abundance")
+            # shinyjs::hide("gene_freq_word")
+            # shinyjs::hide("clonal_relate")
+            # shinyjs::hide("clone_track")
+            # shinyjs::hide("count_kmers")
+            # shinyjs::hide("top_seq_table")
+            # shinyjs::hide("top_seq_plot")
         }
         if (input$tabselected == "common_panel" || input$tabselected == "diff_abundance" ||
                 input$tabselected == "clone_track") {
-            shiny::updateSelectizeInput(session, "common_table_id", choices = unique_prod_rep())
-            shiny::updateSelectizeInput(session, "bar_id", choices = unique_prod_rep())
+            purrr::map(c("common_table_id", "bar_id", "plot_id",
+                            "venn_id", "diff_id", "track_id"),
+                        function(s) shiny::updateSelectizeInput(session, x, unique_prod_rep()))
             shiny::updateSelectizeInput(session, "color_rep_id", choices = c("none", unique_prod_rep()))
             shiny::updateSelectizeInput(session, "color_intersect", choices = c(""))
-            shiny::updateSelectizeInput(session, "plot_id", choices = unique_prod_rep())
-            shiny::updateSelectizeInput(session, "venn_id", choices = unique_prod_rep())
-            shiny::updateSelectizeInput(session, "diff_id", choices = unique_prod_rep())
-            shiny::updateSelectizeInput(session, "track_id", choices = unique_prod_rep())
         }
         if (input$tabselected == "gene_panel") {
             nt_rep_id <- unique(productive_nt()[, "repertoire_id"])
@@ -326,19 +328,14 @@ server <- function(input, output, session) {
         shiny::updateSelectizeInput(session, "color_intersect", choices = input$bar_id)
     })
 
-    data_frame_tabs <- c("airr_table", "seq_counts", "count_stats",
-                         "public_tcrb_seq", "diff_abundance", "count_kmers")
-
     observeEvent(input$tabselected, {
-        if (input$tabselected %in% data_frame_tabs ||
+        if (input$tabselected %in% c("airr_table", "seq_counts", "count_stats",
+                         "public_tcrb_seq", "diff_abundance", "count_kmers") ||
                 input$tabselected == "common_panel" && input$common_sub_tab == "common_seq_table" ||
                 input$tabselected == "prod_seq_panel" && (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") ||
                 input$tabselected == "clonality_panel" && input$clonal_sub_tab != "clonality_plot" ||
                 input$tabselected == "gene_panel" && input$gene_sub_tab == "gene_freq_table") {
             download_choices <- c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda")
-            if (length(input$airr_files) > 0) {
-                shinyjs::enable("download")
-            }
         } else {
             download_choices <- c("PDF" = ".pdf", "RData" = ".rda")
         }
@@ -351,12 +348,9 @@ server <- function(input, output, session) {
     })
 
     update_common_tabs <- reactive({
-        shiny::updateSelectizeInput(session, "common_table_id", choices = unique_prod_rep())
-        shiny::updateSelectizeInput(session, "bar_id", choices = unique_prod_rep())
+        purrr::map(c("common_table_id", "bar_id", "color_intersect", "plot_id", "venn_id"),
+            function(x) shiny::updateSelectizeInput(session, x, choices = unique_prod_rep()))
         shiny::updateSelectizeInput(session, "color_rep_id", choices = c("none", unique_prod_rep()))
-        shiny::updateSelectizeInput(session, "color_intersect", choices = c(""))
-        shiny::updateSelectizeInput(session, "plot_id", choices = unique_prod_rep())
-        shiny::updateSelectizeInput(session, "venn_id", choices = unique_prod_rep())
     })
 
     observeEvent(input$common_sub_tab, {
@@ -370,8 +364,8 @@ server <- function(input, output, session) {
     })
 
     update_gene_tabs <- reactive({
-        nt_rep_id <- unique(productive_nt()[, "repertoire_id"])
-        shiny::updateSelectizeInput(session, "word_id", choices = nt_rep_id)
+        shiny::updateSelectizeInput(session, "word_id",
+                choices = unique(productive_nt()[, "repertoire_id"]))
     })
 
     observeEvent(input$gene_sub_tab, {
@@ -423,17 +417,17 @@ server <- function(input, output, session) {
         } else {
             chord_table <- productive_nt()
         }
-        if (input$vdj_association == 'VJ') {
-            vj <- chord_table %>% 
-                select(v_family, j_family) %>% 
+        if (input$vdj_association == "VJ") {
+            vj <- chord_table %>%
+                select(v_family, j_family) %>%
                 mutate(v_family = replace_na(v_family, "Unresolved"),
                        j_family = replace_na(j_family, "Unresolved"))
 
-            vj <- vj %>% 
+            vj <- vj %>%
                 group_by(v_family, j_family) %>%
-                summarize(duplicate_count = n(), .groups = 'drop') %>% 
+                summarize(duplicate_count = n(), .groups = "drop") %>%
                 pivot_wider(id_cols=v_family, names_from = j_family, values_from = duplicate_count) 
-            row_names <- vj$v_family 
+            row_names <- vj$v_family
             vj <- vj %>%
                     dplyr::select(-v_family)
             vj[is.na(vj)] <- 0
@@ -441,13 +435,13 @@ server <- function(input, output, session) {
             rownames(vj) <- row_names
             vj
 
-        } else if (input$vdj_association == 'DJ') {
-            dj <- chord_table %>% 
-                select(d_family, j_family) %>% 
+        } else if (input$vdj_association == "DJ") {
+            dj <- chord_table %>%
+                select(d_family, j_family) %>%
                 mutate(d_family = replace_na(d_family, "Unresolved"), j_family = replace_na(j_family, "Unresolved"))
-            dj <- dj %>% 
-                group_by(d_family, j_family) %>% 
-                summarize(duplicate_count = n(), .groups = 'drop') %>% 
+            dj <- dj %>%
+                group_by(d_family, j_family) %>%
+                summarize(duplicate_count = n(), .groups = "drop") %>%
                 pivot_wider(id_cols=d_family, names_from = j_family, values_from = duplicate_count)
             row_names <- dj$d_family
             dj <- dj %>%
@@ -476,7 +470,6 @@ server <- function(input, output, session) {
     bindEvent(input$chord_button)
 
     observeEvent(input$bar_button, {
-        shinyjs::enable("download")
         shinyjs::show("commonSeqs_bar")
     })
 
@@ -523,7 +516,6 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$plot_button, {
-        # shinyjs::enable("download")
         shinyjs::show("commonSeqs_plot")
     })
 
@@ -625,8 +617,11 @@ server <- function(input, output, session) {
     })
 
     lorenz_data <- reactive({
-        repertoire_ids <- productive_aa() %>% dplyr::pull(repertoire_id) %>% unique()
-        LymphoSeq2::lorenzCurve(repertoire_ids, airr_data()) + ggplot2::coord_fixed(1/2)
+        repertoire_ids <- productive_aa() %>%
+                            dplyr::pull(repertoire_id) %>%
+                            unique()
+        LymphoSeq2::lorenzCurve(repertoire_ids, airr_data()) +
+                    ggplot2::coord_fixed(1/2)
     })
 
     output$lorenz <- renderPlotly({
@@ -1024,7 +1019,6 @@ server <- function(input, output, session) {
     bindCache(gene_bar_data())
 
     observeEvent(input$word_button, {
-        # shinyjs::enable("download")
         shinyjs::show("gene_freq_word")
     })
 
