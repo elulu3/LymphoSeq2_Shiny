@@ -15,6 +15,10 @@ library(writexl)
 library(shinyjs)
 library(wordcloud2)
 
+library(shinyalert)
+library(shinyscreenshot)
+library(capture)
+
 options(shiny.maxRequestSize = 500 * 1024^2)
 
 
@@ -23,15 +27,15 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
     tabPanel("Explore Data",
         fluidPage(
             shinyjs::useShinyjs(),
-            tags$head(
-                tags$style(
-                    HTML(".shiny-notification {
-                        position:fixed;
-                        top: calc(50%);
-                        left: calc(50%);
-                        }")
-                )
-            ),
+            # tags$head(
+            #     tags$style(
+            #         HTML(".shiny-notification {
+            #             position:fixed;
+            #             top: calc(50%);
+            #             left: calc(50%);
+            #             }")
+            #     )
+            # ),
     sidebarLayout(
         sidebarPanel(
             fileInput("airr_files", label = "Upload Files", multiple = TRUE, accept = c(".tsv", ".rda", ".RData")),
@@ -240,7 +244,9 @@ server <- function(input, output, session) {
             }
         },
             error = function(e) {
-                shiny::showNotification("Cannot convert data. Please choose other files.", "", type = "error")
+                shinyalert::shinyalert("No Common Sequences!",
+                    "Select different repertoire ids.", type = "error")
+                # shiny::showNotification("Cannot convert data. Please choose other files.", "", type = "error")
                 return()
             }
         )
@@ -444,7 +450,8 @@ server <- function(input, output, session) {
                 summarize(duplicate_count = n(), .groups = 'drop') %>% 
                 pivot_wider(id_cols=d_family, names_from = j_family, values_from = duplicate_count)
             row_names <- dj$d_family
-            dj <- dj %>% dplyr::select(-d_family)
+            dj <- dj %>%
+                    dplyr::select(-d_family)
             dj[is.na(dj)] <- 0
             dj <- as.matrix(dj)
             rownames(dj) <- row_names
@@ -458,7 +465,11 @@ server <- function(input, output, session) {
             validate(
                 need(input$vdj_association != "", "Please select VDJ Association")
             )
-            chorddiag::chorddiag(chord_data(), type = "bipartite", groupnameFontsize = 15)
+            print(chord_data())
+            chorddiag::chorddiag(chord_data(), type = "bipartite",
+                        showTicks = FALSE,
+                        groupnameFontsize = 15,
+                        groupnamePadding = 10, margin = 90)
         })
     }) %>%
     bindCache(chord_data()) %>%
@@ -502,7 +513,9 @@ server <- function(input, output, session) {
                 common_bar_data()
                 },
                 error = function(e) {
-                    shiny::showNotification("Cannot render plot", "", type = "error")
+                    shinyalert::shinyalert("No Common Sequences!",
+                        "Select different repertoire ids.", type = "error")
+                    # shiny::showNotification("Cannot render plot", "", type = "error")
                     return()
                 }
             )
@@ -528,7 +541,9 @@ server <- function(input, output, session) {
             if (nrow(common_seqs_plot()$data) > 0) {
                 common_seqs_plot()
             } else {
-                shiny::showNotification("No common sequences", "", type = "error")
+                shinyalert::shinyalert("No Common Sequences!",
+                    "Select different repertoire ids.", type = "error")
+                # shiny::showNotification("No common sequences", "", type = "error")
                 return()
             }
         })
@@ -1083,7 +1098,7 @@ server <- function(input, output, session) {
                 if (input$gene_sub_tab == "gene_freq_heat") {
                     RedBlue <- grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(256)
                     data <- list(gene_heatmap_data(), RedBlue)
-                    data_output <- pheatmap(data[[1]], color = data[[2]], scale = "row")
+                    data_output <- pheatmap::pheatmap(data[[1]], color = data[[2]], scale = "row")
                 } else if (input$gene_sub_tab == "gene_freq_bar") {
                     data_output <- plot(gene_bar_data())
                 } else {
@@ -1169,7 +1184,7 @@ server <- function(input, output, session) {
                 if (input$tabselected == "gene_panel") {
                     print(data_output)
                 } else if (input$tabselected == "chord_diagram") {
-                    circlize::chordDiagram(chord_data(), annotationTrack = c("grid", "name"))
+                    data_output <- circlize::chordDiagram(chord_data(), annotationTrack = c("grid", "name"))
                 } else if (input$tabselected == "common_panel") {
                     if (input$common_sub_tab == "common_bar") {
                         print(data_output)
@@ -1183,6 +1198,7 @@ server <- function(input, output, session) {
                     plot(data_output)
                 }
                 dev.off()
+                # shinyscreenshot::screenshot(id = "chord_diagram")
 
             } else if (input$download_type == ".tsv") {
                     write.table(data_output, file, quote = FALSE, sep='\t', row.names = FALSE)
