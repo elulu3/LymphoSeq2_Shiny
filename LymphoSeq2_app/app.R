@@ -16,8 +16,8 @@ library(shinyjs)
 library(wordcloud2)
 
 library(shinyalert)
-library(shinyscreenshot)
-library(capture)
+# library(shinyscreenshot)
+# library(capture)
 
 options(shiny.maxRequestSize = 500 * 1024^2)
 
@@ -27,15 +27,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
     tabPanel("Explore Data",
         fluidPage(
             shinyjs::useShinyjs(),
-            # tags$head(
-            #     tags$style(
-            #         HTML(".shiny-notification {
-            #             position:fixed;
-            #             top: calc(50%);
-            #             left: calc(50%);
-            #             }")
-            #     )
-            # ),
+
     sidebarLayout(
         sidebarPanel(
             fileInput("airr_files", label = "Upload Files", multiple = TRUE, accept = c(".tsv", ".rda", ".RData")),
@@ -244,9 +236,8 @@ server <- function(input, output, session) {
             }
         },
             error = function(e) {
-                shinyalert::shinyalert("No Common Sequences!",
-                    "Select different repertoire ids.", type = "error")
-                # shiny::showNotification("Cannot convert data. Please choose other files.", "", type = "error")
+                shinyalert::shinyalert("Cannot read data format.",
+                    "Please upload other files.", type = "error")
                 return()
             }
         )
@@ -298,17 +289,6 @@ server <- function(input, output, session) {
                             "clonal_relate", "clone_track", "count_kmers",
                             "top_seq_table", "top_deq_plot"),
                     function(x) shinyjs::hide(x))
-            # shinyjs::hide("chord_diagram")
-            # shinyjs::hide("commonSeqs_venn")
-            # shinyjs::hide("commonSeqs_bar")
-            # shinyjs::hide("commonSeqs_plot")
-            # shinyjs::hide("diff_abundance")
-            # shinyjs::hide("gene_freq_word")
-            # shinyjs::hide("clonal_relate")
-            # shinyjs::hide("clone_track")
-            # shinyjs::hide("count_kmers")
-            # shinyjs::hide("top_seq_table")
-            # shinyjs::hide("top_seq_plot")
         }
         if (input$tabselected == "common_panel" || input$tabselected == "diff_abundance" ||
                 input$tabselected == "clone_track") {
@@ -508,7 +488,6 @@ server <- function(input, output, session) {
                 error = function(e) {
                     shinyalert::shinyalert("No Common Sequences!",
                         "Select different repertoire ids.", type = "error")
-                    # shiny::showNotification("Cannot render plot", "", type = "error")
                     return()
                 }
             )
@@ -535,7 +514,6 @@ server <- function(input, output, session) {
             } else {
                 shinyalert::shinyalert("No Common Sequences!",
                     "Select different repertoire ids.", type = "error")
-                # shiny::showNotification("No common sequences", "", type = "error")
                 return()
             }
         })
