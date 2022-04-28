@@ -158,7 +158,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                         tabPanel("Data Table", value = "gene_freq_table",
                             DT::dataTableOutput("gene_freq_table") %>% withSpinner()),
                         tabPanel("Heat Map", value = "gene_freq_heat",
-                            plotlyOutput("gene_freq_heat") %>% withSpinner()),
+                            plotlyOutput("gene_freq_heat", height = "800px") %>% withSpinner()),
                         tabPanel("Bar Chart", value = "gene_freq_bar",
                             plotlyOutput("gene_freq_bar") %>% withSpinner()),
                         # tabPanel("Word Cloud", value = "gene_freq_word",
@@ -189,10 +189,10 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                             DT::dataTableOutput("count_kmers") %>% withSpinner()),
                         id = "kmer_sub_tab"
                     )),
-                tabPanel("Rarefaction Curve", value = "rarefaction_curve",
-                         plotlyOutput("rarefaction_curve") %>% withSpinner()),
                 tabPanel("Chord Diagram VDJ", value = "chord_diagram",
                         chorddiagOutput("chord_diagram", width = '100%', height = '600px') %>% withSpinner()),
+                tabPanel("Rarefaction Curve", value = "rarefaction_curve",
+                         plotlyOutput("rarefaction_curve") %>% withSpinner()),
                 tabPanel("Lorenz Curve", value = "lorenz_curve",
                         plotlyOutput("lorenz") %>% withSpinner()),
                 tabPanel("Clone Tracking", value = "clone_track", tags$div(
@@ -542,64 +542,63 @@ server <- function(input, output, session) {
     })
 
     common_venn_data <- reactive({
-        # if (length(input$venn_id) == 2) {
-        #     a <- productive_aa() %>%
-        #         dplyr::filter(repertoire_id == input$venn_id[[1]])
-        #     b <- productive_aa() %>%
-        #         dplyr::filter(repertoire_id == input$venn_id[[2]])
-        #     grid::grid.newpage()
-        #     venn <- VennDiagram::draw.pairwise.venn(area1 = length(a$junction_aa), 
-        #                                             area2 = length(b$junction_aa), 
-        #                                             cross.area = length(intersect(a$junction_aa, 
-        #                                                                         b$junction_aa)), 
-        #                                             category = c(input$venn_id[1], 
-        #                                                         input$venn_id[2]), 
-        #                                             cat.fontfamily = rep("sans", 2), 
-        #                                             fontfamily = rep("sans", 3), 
-        #                                             fill = c("#3288bd", "#d53e4f"), 
-        #                                             cat.pos = c(0, 0),
-        #                                             cat.dist = rep(0.025, 2),
-        #                                             cex = 1, 
-        #                                             cat.cex = 0.7,
-        #                                             lwd = rep(2, 2))
-        #     data_output <- venn
-        # }
-        # if (length(input$venn_id) == 3) {
-        #     a <- productive_aa() %>% 
-        #         dplyr::filter(repertoire_id == input$venn_id[[1]])
-        #     b <- productive_aa() %>% 
-        #         dplyr::filter(repertoire_id == input$venn_id[[2]])
-        #     c <- productive_aa() %>% 
-        #         dplyr::filter(repertoire_id == input$venn_id[[3]])
-        #     grid::grid.newpage()
-        #     venn <- VennDiagram::draw.triple.venn(area1 = length(a$junction_aa), 
-        #                                         area2 = length(b$junction_aa), 
-        #                                         area3 = length(c$junction_aa), 
-        #                                         n12 = length(intersect(a$junction_aa, 
-        #                                                                 b$junction_aa)), 
-        #                                         n23 = length(intersect(b$junction_aa, 
-        #                                                                 c$junction_aa)), 
-        #                                         n13 = length(intersect(a$junction_aa, 
-        #                                                                 c$junction_aa)), 
-        #                                         n123 = length(Reduce(intersect, 
-        #                                                             list(a$junction_aa, 
-        #                                                                     b$junction_aa, 
-        #                                                                     c$junction_aa))), 
-        #                                         category = c(input$venn_id[1], 
-        #                                                     input$venn_id[2], 
-        #                                                     input$venn_id[3]), 
-        #                                         cat.fontfamily = rep("sans", 3), 
-        #                                         fontfamily = rep("sans", 7), 
-        #                                         fill = c("#3288bd", "#abdda4", "#d53e4f"), 
-        #                                         cat.pos = c(0, 0, 180), 
-        #                                         cat.dist = rep(0.025, 3),
-        #                                         cex = 1, 
-        #                                         cat.cex = 0.7,
-        #                                         lwd = rep(2, 3))
-        #     data_output <- venn
-        # }
-        # data_output
-        LymphoSeq2::commonSeqsVenn(input$venn_id, )
+        if (length(input$venn_id) == 2) {
+            a <- productive_aa() %>%
+                dplyr::filter(repertoire_id == input$venn_id[[1]])
+            b <- productive_aa() %>%
+                dplyr::filter(repertoire_id == input$venn_id[[2]])
+            grid::grid.newpage()
+            venn <- VennDiagram::draw.pairwise.venn(area1 = length(a$junction_aa), 
+                                                    area2 = length(b$junction_aa), 
+                                                    cross.area = length(intersect(a$junction_aa, 
+                                                                                b$junction_aa)), 
+                                                    category = c(input$venn_id[1], 
+                                                                input$venn_id[2]), 
+                                                    cat.fontfamily = rep("sans", 2), 
+                                                    fontfamily = rep("sans", 3), 
+                                                    fill = c("#3288bd", "#d53e4f"), 
+                                                    cat.pos = c(0, 0),
+                                                    cat.dist = rep(0.025, 2),
+                                                    cex = 1, 
+                                                    cat.cex = 0.7,
+                                                    lwd = rep(2, 2))
+            data_output <- venn
+        }
+        if (length(input$venn_id) == 3) {
+            a <- productive_aa() %>% 
+                dplyr::filter(repertoire_id == input$venn_id[[1]])
+            b <- productive_aa() %>% 
+                dplyr::filter(repertoire_id == input$venn_id[[2]])
+            c <- productive_aa() %>% 
+                dplyr::filter(repertoire_id == input$venn_id[[3]])
+            grid::grid.newpage()
+            venn <- VennDiagram::draw.triple.venn(area1 = length(a$junction_aa), 
+                                                area2 = length(b$junction_aa), 
+                                                area3 = length(c$junction_aa), 
+                                                n12 = length(intersect(a$junction_aa, 
+                                                                        b$junction_aa)), 
+                                                n23 = length(intersect(b$junction_aa, 
+                                                                        c$junction_aa)), 
+                                                n13 = length(intersect(a$junction_aa, 
+                                                                        c$junction_aa)), 
+                                                n123 = length(Reduce(intersect, 
+                                                                    list(a$junction_aa, 
+                                                                            b$junction_aa, 
+                                                                            c$junction_aa))), 
+                                                category = c(input$venn_id[1], 
+                                                            input$venn_id[2], 
+                                                            input$venn_id[3]), 
+                                                cat.fontfamily = rep("sans", 3), 
+                                                fontfamily = rep("sans", 7), 
+                                                fill = c("#3288bd", "#abdda4", "#d53e4f"), 
+                                                cat.pos = c(0, 0, 180), 
+                                                cat.dist = rep(0.025, 3),
+                                                cex = 1, 
+                                                cat.cex = 0.7,
+                                                lwd = rep(2, 3))
+            data_output <- venn
+        }
+        data_output
     })
 
     output$commonSeqs_venn <- renderPlot({
@@ -609,7 +608,7 @@ server <- function(input, output, session) {
                 need(length(input$venn_id) == 2 | length(input$venn_id) == 3,
                     "Please select only 2 or 3 repertoire ids")
             )
-            common_venn_data()
+            grid::grid.draw(common_venn_data())
         })
     })
 
@@ -623,6 +622,10 @@ server <- function(input, output, session) {
 
     output$lorenz <- renderPlotly({
         lorenz_data()
+    })
+
+    output$rarefaction_curve <- renderPlotly({
+        LymphoSeq2::plotRarefactionCurve(airr_data())
     })
 
     seq_count_data <- reactive({
