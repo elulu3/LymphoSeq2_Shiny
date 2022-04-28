@@ -82,10 +82,6 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                 numericInput("zero_val", "Zero Value:", value = 1),
                 actionButton("diff_button", "Create Table")),
 
-            conditionalPanel(condition = "input.tabselected == 'count_kmers'",
-                numericInput("k_val", "Length of kmer:", value = 2),
-                actionButton("kmer_button", "Count Kmers")),
-
             conditionalPanel(condition = "input.tabselected == 'clone_track'",
                 selectizeInput("track_id", label = "Select repertoire ids to track",
                     choices = NULL, multiple = TRUE),
@@ -102,7 +98,21 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                                 (input.prod_seq_sub_tab == 'top_seq_table' || input.prod_seq_sub_tab == 'top_seq_plot')",
                 numericInput("top_seq_num", "Number of top sequences:", value = NULL, min = 0),
                 actionButton("top_seq_button", "Calculate Top Sequences")),
-            
+
+            conditionalPanel(condition = "input.tabselected == 'kmer_panel' &&
+                                input.kmer_sub_tab == 'count_kmers'",
+                numericInput("k_val", "Length of kmer:", value = 2),
+                radioButtons("separate_by_rep", "View counts by repertoire?",
+                                choices = c("yes", "no"), inline = TRUE),
+                actionButton("kmer_button", "Count Kmers")),
+
+            conditionalPanel(condition = "input.tabselected == 'kmer_panel' &&
+                                input.kmer_sub_tab == 'kmer_distrib'",
+                    numericInput("k_val", "Length of kmer:", value = 2),
+                    numericInput("k_top", "Number of top kmers", value = 10),
+                    actionButton("kmer_distrib_button", "Plot Distribution")
+                ),
+
             tags$br(),
             fluidRow (style = "border: 1px solid #d3d3d3; border-radius: 5px;",
                 column(width = 6,
@@ -120,59 +130,69 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                 tabPanel("AIRR Data Table", value = "airr_table",
                         DT::dataTableOutput("table") %>% withSpinner()),
                 tabPanel("Explore Common Productive Sequences", value = "common_panel",
-                            tabsetPanel(
-                                tabPanel("Data Table", value = "common_seq_table",
-                                    DT::dataTableOutput("common_seq_table") %>% withSpinner()),
-                                tabPanel("Bar Chart", value = "common_bar",
-                                    plotOutput("commonSeqs_bar") %>% withSpinner()),
-                                tabPanel("Plot", value = "common_plot",
-                                    plotlyOutput("commonSeqs_plot") %>% withSpinner()),
-                                tabPanel("Venn Diagram", value = "common_venn",
-                                    plotOutput("commonSeqs_venn") %>% withSpinner()),
-                                id = "common_sub_tab"
-                            )),
+                    tabsetPanel(
+                        tabPanel("Data Table", value = "common_seq_table",
+                            DT::dataTableOutput("common_seq_table") %>% withSpinner()),
+                        tabPanel("Bar Chart", value = "common_bar",
+                            plotOutput("commonSeqs_bar") %>% withSpinner()),
+                        tabPanel("Plot", value = "common_plot",
+                            plotlyOutput("commonSeqs_plot") %>% withSpinner()),
+                        tabPanel("Venn Diagram", value = "common_venn",
+                            plotOutput("commonSeqs_venn") %>% withSpinner()),
+                        id = "common_sub_tab"
+                    )),
                 tabPanel("Explore Productive Sequences", value = "prod_seq_panel",
-                            tabsetPanel(
-                                tabPanel("Top Productive Sequences Table", value = "top_seq_table",
-                                    DT::dataTableOutput("top_seq_table") %>% withSpinner()),
-                                tabPanel("Top Productive Sequences Plot", value = "top_seq_plot",
-                                    plotlyOutput("top_seq_plot") %>% withSpinner()),                                    
-                                tabPanel("Unique Productive Sequences Plot", value = "produtive_seq_plot",
-                                    plotlyOutput("productive_plot") %>% withSpinner()),
-                                tabPanel("Unique Productive Sequences Table", value = "produtive_seq_table",
-                                    DT::dataTableOutput("produtive_seq_table") %>% withSpinner()),
-                                id = "prod_seq_sub_tab"
-                            )),
+                    tabsetPanel(
+                        tabPanel("Top Productive Sequences Table", value = "top_seq_table",
+                            DT::dataTableOutput("top_seq_table") %>% withSpinner()),
+                        tabPanel("Top Productive Sequences Plot", value = "top_seq_plot",
+                            plotlyOutput("top_seq_plot") %>% withSpinner()),                                    
+                        tabPanel("Unique Productive Sequences Plot", value = "produtive_seq_plot",
+                            plotlyOutput("productive_plot") %>% withSpinner()),
+                        tabPanel("Unique Productive Sequences Table", value = "produtive_seq_table",
+                            DT::dataTableOutput("produtive_seq_table") %>% withSpinner()),
+                        id = "prod_seq_sub_tab"
+                    )),
                 tabPanel("Explore Gene Frequencies", value = "gene_panel",
-                            tabsetPanel(
-                                tabPanel("Data Table", value = "gene_freq_table",
-                                    DT::dataTableOutput("gene_freq_table") %>% withSpinner()),
-                                tabPanel("Heat Map", value = "gene_freq_heat",
-                                    plotlyOutput("gene_freq_heat") %>% withSpinner()),
-                                tabPanel("Bar Chart", value = "gene_freq_bar",
-                                    plotlyOutput("gene_freq_bar") %>% withSpinner()),
-                                # tabPanel("Word Cloud", value = "gene_freq_word",
-                                #     wordcloud2Output("gene_freq_word") %>% withSpinner()),
-                                id = "gene_sub_tab"
-                            )),
+                    tabsetPanel(
+                        tabPanel("Data Table", value = "gene_freq_table",
+                            DT::dataTableOutput("gene_freq_table") %>% withSpinner()),
+                        tabPanel("Heat Map", value = "gene_freq_heat",
+                            plotlyOutput("gene_freq_heat", height = "800px") %>% withSpinner()),
+                        tabPanel("Bar Chart", value = "gene_freq_bar",
+                            plotlyOutput("gene_freq_bar") %>% withSpinner()),
+                        # tabPanel("Word Cloud", value = "gene_freq_word",
+                        #     wordcloud2Output("gene_freq_word") %>% withSpinner()),
+                        id = "gene_sub_tab"
+                    )),
                 tabPanel("Explore Clonality", value = "clonality_panel",
-                            tabsetPanel(
-                                tabPanel("Clonality", value = "clonality",
-                                    DT::dataTableOutput("clonality") %>% withSpinner()),
-                                tabPanel("Clonal Relatedness", value = "clonal_relate",
-                                    DT::dataTableOutput("clonal_relate") %>% withSpinner()),
-                                tabPanel("Clonality Statistics", value = "clonality_stats",
-                                    DT::dataTableOutput("clonality_stats") %>% withSpinner()),
-                                tabPanel("Clonality Plot", value = "clonality_plot",
-                                    plotlyOutput("clonality_plot") %>% withSpinner()),
-                                tabPanel("Sequencing Counts", value = "seq_counts",
-                                    DT::dataTableOutput("seq_count") %>% withSpinner()),
-                                tabPanel("Count Statistics", value = "count_stats",
-                                    DT::dataTableOutput("stats_count") %>% withSpinner()),               
-                                id = "clonal_sub_tab"
-                            )),
+                    tabsetPanel(
+                        tabPanel("Clonality", value = "clonality",
+                            DT::dataTableOutput("clonality") %>% withSpinner()),
+                        tabPanel("Clonal Relatedness", value = "clonal_relate",
+                            DT::dataTableOutput("clonal_relate") %>% withSpinner()),
+                        tabPanel("Clonality Statistics", value = "clonality_stats",
+                            DT::dataTableOutput("clonality_stats") %>% withSpinner()),
+                        tabPanel("Clonality Plot", value = "clonality_plot",
+                            plotlyOutput("clonality_plot") %>% withSpinner()),
+                        tabPanel("Sequencing Counts", value = "seq_counts",
+                            DT::dataTableOutput("seq_count") %>% withSpinner()),
+                        tabPanel("Count Statistics", value = "count_stats",
+                            DT::dataTableOutput("stats_count") %>% withSpinner()),               
+                        id = "clonal_sub_tab"
+                    )),
+                tabPanel("Explore K-mers", value = "kmer_panel",
+                    tabsetPanel(
+                        tabPanel("Kmer Distribution", value = "kmer_distrib",
+                            plotlyOutput("kmer_distrib") %>% withSpinner()),
+                        tabPanel("Kmer Counts", value = "count_kmers",
+                            DT::dataTableOutput("count_kmers") %>% withSpinner()),
+                        id = "kmer_sub_tab"
+                    )),
                 tabPanel("Chord Diagram VDJ", value = "chord_diagram",
                         chorddiagOutput("chord_diagram", width = '100%', height = '600px') %>% withSpinner()),
+                tabPanel("Rarefaction Curve", value = "rarefaction_curve",
+                         plotlyOutput("rarefaction_curve") %>% withSpinner()),
                 tabPanel("Lorenz Curve", value = "lorenz_curve",
                         plotlyOutput("lorenz") %>% withSpinner()),
                 tabPanel("Clone Tracking", value = "clone_track", tags$div(
@@ -186,8 +206,6 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                         DT::dataTableOutput("public_tcrb") %>% withSpinner()),
                 tabPanel("Differential Abundance", value = "diff_abundance",
                         DT::dataTableOutput("diff_abundance") %>% withSpinner()),
-                tabPanel("Kmer Counts", value = "count_kmers",
-                        DT::dataTableOutput("count_kmers") %>% withSpinner()),
                 id = "tabselected"
             )
         )
@@ -590,7 +608,7 @@ server <- function(input, output, session) {
                 need(length(input$venn_id) == 2 | length(input$venn_id) == 3,
                     "Please select only 2 or 3 repertoire ids")
             )
-            common_venn_data()
+            grid::grid.draw(common_venn_data())
         })
     })
 
@@ -604,6 +622,10 @@ server <- function(input, output, session) {
 
     output$lorenz <- renderPlotly({
         lorenz_data()
+    })
+
+    output$rarefaction_curve <- renderPlotly({
+        LymphoSeq2::plotRarefactionCurve(airr_data())
     })
 
     seq_count_data <- reactive({
@@ -1047,7 +1069,7 @@ server <- function(input, output, session) {
     })
 
     kmer_table_data <- reactive({
-        LymphoSeq2::countKmer(airr_data(), input$k_val)
+        LymphoSeq2::countKmer(airr_data(), input$k_val, TRUE)
     })
 
     output$count_kmers <- DT::renderDataTable({
@@ -1059,6 +1081,18 @@ server <- function(input, output, session) {
             kmer_table_data() %>%
                 DT::datatable(filter = "top", options = list(scrollX = TRUE))
         })
+    })
+
+    output$kmer_distrib <- renderPlotly({
+        input$kmer_distrib_button
+        isolate({
+            validate(
+                need(input$k_val > 1, "Please input length of at least 2")
+                %then%
+                need(input$k_top > 0, "Please enter how many repertoires to visualize")
+            )
+        })
+        LymphoSeq2::kmerPlot(kmer_table_data(), input$k_top)
     })
 
     output$download <- downloadHandler(
