@@ -81,7 +81,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                 numericInput("q_val", "q Value (False Discovery Rate):", value = 1, min = 0, max = 1),
                 numericInput("zero_val", "Zero Value:", value = 1),
                 actionButton("diff_button", "Create Table")),
-            
+
             conditionalPanel(condition = "input.tabselected == 'count_kmers'",
                 numericInput("k_val", "Length of kmer:", value = 2),
                 actionButton("kmer_button", "Count Kmers")),
@@ -93,7 +93,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                     choices = c("yes", "no"), inline = TRUE),
                 numericInput("top_num", "Number of top clones to map:", value = 50, min = 1),
                 actionButton("track_button", "Create Plot")),
-            
+
             conditionalPanel(condition = "input.tabselected == 'pairwise_sim'",
                 radioButtons("mode", "Select mode to use for calculation:",
                     choices = c("Bhattacharyya", "Similarity", "Sorensen", "PSI"))),
@@ -1137,18 +1137,13 @@ server <- function(input, output, session) {
                 shiny::withProgress(
                     message = "This make take a few minutes...",
                     {
-                        airr_table <- airr_data()
-                        prod_aa <- productive_aa()
-                        prod_nt <- productive_nt()
-                        clone_data <- clonality_data()
-                        save(data_output, airr_table, prod_aa, prod_nt, clone_data, file = file)
+                        study_table <- airr_data()
+                        amino_table <- productive_aa()
+                        nucleotide_table <- productive_nt()
+                        summary_table <- clonality_data()
+                        save(data_output, study_table, amino_table, nucleotide_table, summary_table, file = file)
                     }
                 )
-                # airr_table <- airr_data()
-                # prod_aa <- productive_aa()
-                # prod_nt <- productive_nt()
-                # clone_data <- clonality_data()
-                # save(data_output, airr_table, prod_aa, prod_nt, clone_data, file = file)
 
             } else if (input$download_type == ".pdf") {
                 pdf(file, width = 11, height = 8.5)
