@@ -101,14 +101,14 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
 
             conditionalPanel(condition = "input.tabselected == 'kmer_panel' &&
                                 input.kmer_sub_tab == 'count_kmers'",
-                numericInput("k_val", "Length of kmer:", value = 2),
+                numericInput("k_val", "Length of kmer:", value = 5),
                 radioButtons("separate_by_rep", "View counts by repertoire?",
                                 choices = c("yes", "no"), inline = TRUE),
                 actionButton("kmer_button", "Count Kmers")),
 
             conditionalPanel(condition = "input.tabselected == 'kmer_panel' &&
                                 input.kmer_sub_tab == 'kmer_distrib'",
-                    numericInput("k_val", "Length of kmer:", value = 2),
+                    numericInput("k_val", "Length of kmer:", value = 5),
                     numericInput("k_top", "Number of top kmers", value = 10),
                     actionButton("kmer_distrib_button", "Plot Distribution")
                 ),
@@ -305,7 +305,8 @@ server <- function(input, output, session) {
             purrr::map(c("chord_diagram", "commonSeqs_venn", "commonSeqs_bar",
                             "commonSeqs_plot", "diff_abundance", "gene_freq_word",
                             "clonal_relate", "clone_track", "count_kmers",
-                            "top_seq_table", "top_deq_plot"),
+                            "top_seq_table", "top_deq_plot",
+                            "count_kmers", "kmer_distrib"),
                     function(x) shinyjs::hide(x))
         }
         if (input$tabselected == "common_panel" || input$tabselected == "diff_abundance" ||
@@ -1159,12 +1160,18 @@ server <- function(input, output, session) {
                 } else if (input$tabselected == "count_stats") {
                     data_output <- stats_count_data()
                 }
+            else if (input$tabselected == "kmer_panel") {
+                if (input$tabselected == "count_kmers") {
+                    data_output <- kmer_table_data()
+                } else if (input$tabselected == "count_distrib") {
+                    data_output <- LymphoSeq2::kmerPlot(kmer_table_data())
+                }
             } else if (input$tabselected == "public_tcrb_seq") {
                 data_output <- public_table_data()
-            } else if (input$tabselected == "count_kmers") {
-                data_output <- kmer_table_data()
             } else if (input$tabselected == "diff_abundance") {
                 data_output <- diff_table_data()
+            } else if (input$tabselected == "rarefaction_curve") {
+                data_output <- 
             }
 
             if (input$download_type == ".rda") {
