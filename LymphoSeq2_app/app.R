@@ -1171,7 +1171,7 @@ server <- function(input, output, session) {
             } else if (input$tabselected == "diff_abundance") {
                 data_output <- diff_table_data()
             } else if (input$tabselected == "rarefaction_curve") {
-                data_output <- 
+                data_output <- LymphoSeq2::plotRarefactionCurve(airr_data())
             }
 
             if (input$download_type == ".rda") {
