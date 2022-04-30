@@ -1160,7 +1160,7 @@ server <- function(input, output, session) {
                 } else if (input$tabselected == "count_stats") {
                     data_output <- stats_count_data()
                 }
-            else if (input$tabselected == "kmer_panel") {
+            } else if (input$tabselected == "kmer_panel") {
                 if (input$tabselected == "count_kmers") {
                     data_output <- kmer_table_data()
                 } else if (input$tabselected == "count_distrib") {
@@ -1209,9 +1209,9 @@ server <- function(input, output, session) {
                 # shinyscreenshot::screenshot(id = "chord_diagram")
 
             } else if (input$download_type == ".tsv") {
-                    write.table(data_output, file, quote = FALSE, sep='\t', row.names = FALSE)
+                write.table(data_output, file, quote = FALSE, sep='\t', row.names = FALSE)
             } else if (input$download_type == ".xlsx") {
-                    writexl::write_xlsx(data_output, path = file)
+                writexl::write_xlsx(data_output, path = file)
             }
         }
     )
