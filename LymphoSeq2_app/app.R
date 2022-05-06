@@ -103,7 +103,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                                 input.kmer_sub_tab == 'count_kmers'",
                 numericInput("k_val", "Length of kmer:", value = 5),
                 radioButtons("separate_by_rep", "View counts by repertoire?",
-                                choices = c("yes", "no"), inline = TRUE),
+                                choices = c("yes" = TRUE, "no" = FALSE), inline = TRUE),
                 actionButton("kmer_button", "Count Kmers")),
 
             conditionalPanel(condition = "input.tabselected == 'kmer_panel' &&
@@ -183,10 +183,10 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                     )),
                 tabPanel("Explore K-mers", value = "kmer_panel",
                     tabsetPanel(
-                        tabPanel("Kmer Distribution", value = "kmer_distrib",
-                            plotlyOutput("kmer_distrib") %>% withSpinner()),
                         tabPanel("Kmer Counts", value = "count_kmers",
                             DT::dataTableOutput("count_kmers") %>% withSpinner()),
+                        tabPanel("Kmer Distribution", value = "kmer_distrib",
+                            plotlyOutput("kmer_distrib") %>% withSpinner()),
                         id = "kmer_sub_tab"
                     )),
                 tabPanel("Chord Diagram VDJ", value = "chord_diagram",
@@ -304,7 +304,7 @@ server <- function(input, output, session) {
                 input$top_seq_button) {
             purrr::map(c("chord_diagram", "commonSeqs_venn", "commonSeqs_bar",
                             "commonSeqs_plot", "diff_abundance", "gene_freq_word",
-                            "clonal_relate", "clone_track", "count_kmers",
+                            "clonal_relate", "clone_track",
                             "top_seq_table", "top_deq_plot",
                             "count_kmers", "kmer_distrib"),
                     function(x) shinyjs::hide(x))
@@ -329,11 +329,12 @@ server <- function(input, output, session) {
 
     observeEvent(input$tabselected, {
         if (input$tabselected %in% c("airr_table", "seq_counts", "count_stats",
-                         "public_tcrb_seq", "diff_abundance", "count_kmers") ||
+                         "public_tcrb_seq", "diff_abundance") ||
                 input$tabselected == "common_panel" && input$common_sub_tab == "common_seq_table" ||
                 input$tabselected == "prod_seq_panel" && (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") ||
                 input$tabselected == "clonality_panel" && input$clonal_sub_tab != "clonality_plot" ||
-                input$tabselected == "gene_panel" && input$gene_sub_tab == "gene_freq_table") {
+                input$tabselected == "gene_panel" && input$gene_sub_tab == "gene_freq_table" ||
+                input$tabselected == "kmer_panel" && input$kmer_sub_tab == "count_kmers") {
             download_choices <- c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda")
         } else {
             download_choices <- c("PDF" = ".pdf", "RData" = ".rda")
@@ -388,6 +389,15 @@ server <- function(input, output, session) {
 
     observeEvent(input$prod_seq_sub_tab, {
         if (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") {
+            shiny::updateRadioButtons(session, "download_type",
+                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
+        } else {
+            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
+        }
+    })
+
+    observeEvent(input$kmer_sub_tab, {
+        if (input$kmer_sub_tab == "count_kmers") {
             shiny::updateRadioButtons(session, "download_type",
                 choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
         } else {
@@ -1070,7 +1080,7 @@ server <- function(input, output, session) {
     })
 
     kmer_table_data <- reactive({
-        LymphoSeq2::countKmer(airr_data(), input$k_val, TRUE)
+        LymphoSeq2::countKmer(airr_data(), input$k_val, input$separate_by_rep)
     })
 
     output$count_kmers <- DT::renderDataTable({
@@ -1093,8 +1103,11 @@ server <- function(input, output, session) {
                 need(input$k_top > 0, "Please enter how many repertoires to visualize")
             )
         })
+        shiny::updateRadioButtons(session, "separate_by_rep", selected = "yes")
         LymphoSeq2::kmerPlot(kmer_table_data(), input$k_top)
-    })
+    }) %>%
+    bindCache(count_kmers()) %>%
+    bindEvent(input$kmer_distrib_button)
 
     output$download <- downloadHandler(
         filename <- function() {
@@ -1155,16 +1168,16 @@ server <- function(input, output, session) {
                     data_output <- clone_relate_data()
                 } else if (input$clonal_sub_tab == "clonality_stats") {
                     data_output <- clone_stats_data()
-                } else if (input$tabselected == "seq_counts") {
+                } else if (input$clonal_sub_tab == "seq_counts") {
                     data_output <- seq_count_data()
-                } else if (input$tabselected == "count_stats") {
+                } else if (input$clonal_sub_tab == "count_stats") {
                     data_output <- stats_count_data()
                 }
             } else if (input$tabselected == "kmer_panel") {
-                if (input$tabselected == "count_kmers") {
+                if (input$kmer_sub_tab == "count_kmers") {
                     data_output <- kmer_table_data()
-                } else if (input$tabselected == "count_distrib") {
-                    data_output <- LymphoSeq2::kmerPlot(kmer_table_data())
+                } else if (input$kmer_sub_tab == "kmer_distrib") {
+                    data_output <- LymphoSeq2::kmerPlot(kmer_table_data(), input$k_top)
                 }
             } else if (input$tabselected == "public_tcrb_seq") {
                 data_output <- public_table_data()
@@ -1189,7 +1202,7 @@ server <- function(input, output, session) {
             } else if (input$download_type == ".pdf") {
                 pdf(file, width = 11, height = 8.5)
 
-                if (input$tabselected == "gene_panel") {
+                if (input$tabselected == "gene_panel" || input$tabselected == "kmer_panel") {
                     print(data_output)
                 } else if (input$tabselected == "chord_diagram") {
                     data_output <- circlize::chordDiagram(chord_data(), annotationTrack = c("grid", "name"))
