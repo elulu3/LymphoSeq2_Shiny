@@ -1,3 +1,5 @@
+---
 layout: page
-title: "HOME PAGE"
+title: Home
 permalink: /home/
+---
