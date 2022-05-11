@@ -422,7 +422,7 @@ server <- function(input, output, session) {
                 input$tabselected == "clone_track") {
             purrr::map(c("common_table_id", "bar_id", "plot_id",
                             "venn_id", "diff_id", "track_id"),
-                        function(s) shiny::updateSelectizeInput(session, x, unique_prod_rep()))
+                        function(x) shiny::updateSelectizeInput(session, x, unique_prod_rep()))
             shiny::updateSelectizeInput(session, "color_rep_id", choices = c("none", unique_prod_rep()))
             shiny::updateSelectizeInput(session, "color_intersect", choices = c(""))
         }
@@ -1116,7 +1116,7 @@ server <- function(input, output, session) {
         shiny::updateRadioButtons(session, "separate_by_rep", selected = "yes")
         LymphoSeq2::kmerPlot(kmer_table_data(), input$k_top)
     }) %>%
-    bindCache(count_kmers()) %>%
+    bindCache(kmer_table_data()) %>%
     bindEvent(input$kmer_distrib_button)
 
 # ------------------------------------------------------------------------------------------------------------------ #
