@@ -14,10 +14,7 @@ library(chorddiag)
 library(writexl)
 library(shinyjs)
 library(wordcloud2)
-
 library(shinyalert)
-# library(shinyscreenshot)
-# library(capture)
 
 options(shiny.maxRequestSize = 500 * 1024^2)
 
@@ -226,12 +223,121 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
     if (is.null(a)) b else a
 }
 
+interactive_alluvial <- function(p) {
+    alluvium_width <- 1/3
+    pbuilt <<- ggplot_build(p)
+
+    data_draw <- transform(pbuilt$data[[3]], width = 1/3)
+    groups_to_draw <<- split(data_draw, data_draw$group)
+    group_xsplines <- lapply(groups_to_draw,
+                            data_to_alluvium)
+
+    xspline_coords <- lapply(
+        group_xsplines,
+        function(coords) grid::xsplineGrob(x = coords$x,
+                                        y = coords$y,
+                                        shape = coords$shape,
+                                        open = FALSE)
+    )
+
+    xspline_points <- lapply(xspline_coords, grid::xsplinePoints)
+
+    xrange_old <- range(unlist(lapply(
+        xspline_points,
+        function(pts) as.numeric(pts$x)
+    )))
+    yrange_old <- range(unlist(lapply(
+        xspline_points,
+        function(pts) as.numeric(pts$y)
+    )))
+    xrange_new <- c(1 - alluvium_width/2, max(pbuilt$data[[3]]$x)
+                    + alluvium_width/2)
+    yrange_new <- c(0, sum(pbuilt$data[[3]]$count[pbuilt$data[[3]]$x == 1]))
+
+    new_range_transform <- function(x_old, range_old, range_new) {
+        (x_old - range_old[1])/(range_old[2] - range_old[1]) *
+        (range_new[2] - range_new[1]) + range_new[1]
+    }
+
+    polygon_coords <<- lapply(xspline_points, function(pts) {
+        x_trans <- new_range_transform(x_old = as.numeric(pts$x),
+                                    range_old = xrange_old,
+                                    range_new = xrange_new)
+        y_trans <- new_range_transform(x_old = as.numeric(pts$y),
+                                    range_old = yrange_old,
+                                    range_new = yrange_new)
+        list(x = x_trans, y = y_trans)
+    })
+}
+
+alluvial_tooltip <- function(plot_hover) {
+    node_width <- 1/3
+    if (!is.null(plot_hover)) {
+        hover <- plot_hover
+        x_coord <- round(hover$x)
+
+        if (abs(hover$x - x_coord) < (node_width / 2)) {
+            node_row <- pbuilt$data[[3]]$x == x_coord &
+                        hover$y > pbuilt$data[[3]]$ymin &
+                        hover$y < pbuilt$data[[3]]$ymax
+            node_label <- pbuilt$data[[3]]$stratum[node_row]
+            node_n <- pbuilt$data[[3]]$n[node_row]
+            offset <- 5
+
+            renderTags(
+                tags$div(
+                    node_label, #tags$br(),
+                    #"n =", node_n,
+                    style = paste0(
+                    "position: absolute; ",
+                    "top: ", hover$coords_css$y + offset, "px; ",
+                    "left: ", hover$coords_css$x + offset, "px; ",
+                    "background: gray; ",
+                    "padding: 3px; ",
+                    "color: white; "
+                    )
+                )
+            )$html
+        } else {
+            hover_within_flow <- sapply(
+                polygon_coords,
+                function(pol) point.in.polygon(point.x = hover$x,
+                                                point.y = hover$y,
+                                                pol.x = pol$x,
+                                                pol.y = pol$y)
+            )
+            if (any(hover_within_flow)) {
+                coord_id <- rev(which(hover_within_flow == 1))[1]
+                flow_label <- paste(groups_to_draw[[coord_id]]$stratum, collapse = ' -> ')
+                flow_n <- groups_to_draw[[coord_id]]$count[1]
+                offset <- 5
+
+                renderTags(
+                    tags$div(
+                        flow_label, #tags$br(),
+                        #"n =", flow_n,
+                        style = paste0(
+                            "position: absolute; ",
+                            "top: ", hover$coords_css$y + offset, "px; ",
+                            "left: ", hover$coords_css$x + offset, "px; ",
+                            "background: gray; ",
+                            "padding: 3px; ",
+                            "color: white; "
+                        )
+                    )
+                )$html
+            }
+        }
+    }
+}
+
 server <- function(input, output, session) {
 
     shinyjs::disable("top_num")
     shinyjs::disable("top_chord_num")
     rda_envir <<- NULL
 
+    # Standardizes input files into AIRR-compliant format
     airr_data <- reactive({
         validate(
             need(!is.null(input$airr_files),
@@ -261,13 +367,7 @@ server <- function(input, output, session) {
         )
     })
 
-    output$table <- DT::renderDataTable({
-        airr_table <- airr_data() %>%
-                        purrr::discard(~all(is.na(.) | . == "")) %>%
-                        DT::datatable(filter = "top", options = list(scrollX = TRUE))
-
-    })
-
+    # Computes the productive amino acid sequences
     productive_aa <- reactive({
         if (is.null(rda_envir)) {
             LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
@@ -276,6 +376,7 @@ server <- function(input, output, session) {
         }
     })
 
+    # Computes the productive nucleotide sequences
     productive_nt <- reactive({
         if (is.null(rda_envir)) {
             LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction")
@@ -284,10 +385,13 @@ server <- function(input, output, session) {
         }
     })
 
+    # Grabs all the unique productive amino acid sequences.
+    # Intended to be used for drop down selection.
     unique_prod_rep <- reactive({
         unique(productive_aa()[, "repertoire_id"])
     })
 
+    # Computes the clonality data
     clonality_data <- reactive({
         if (is.null(rda_envir)) {
             LymphoSeq2::clonality(airr_data())
@@ -296,6 +400,11 @@ server <- function(input, output, session) {
         }
     })
 
+# ------------------------------------------------------------------------------------------------------------------ #
+
+    # When files are uploaded, the following should occur:
+    #   - all plots should be cleared
+    #   - all drop down selections should be updated to reflect upload data
     observeEvent(input$airr_files, {
         airr_data()
         if (input$chord_button || input$venn_button || input$bar_button ||
@@ -415,6 +524,15 @@ server <- function(input, output, session) {
         } else {
             shinyjs::enable("top_chord_num")
         }
+    })
+
+# ------------------------------------------------------------------------------------------------------------------ #
+
+    output$table <- DT::renderDataTable({
+        airr_table <- airr_data() %>%
+                        # purrr::discard(~all(is.na(.) | . == "")) %>%
+                        DT::datatable(filter = "top", options = list(scrollX = TRUE))
+
     })
 
     chord_data <- reactive({
@@ -814,114 +932,6 @@ server <- function(input, output, session) {
         plotly::ggplotly(clone_plot_data())
     })
 
-    interactive_alluvial <- function(p) {
-        alluvium_width <- 1/3
-        pbuilt <<- ggplot_build(p)
-
-        data_draw <- transform(pbuilt$data[[3]], width = 1/3)
-        groups_to_draw <<- split(data_draw, data_draw$group)
-        group_xsplines <- lapply(groups_to_draw,
-                                data_to_alluvium)
-
-        xspline_coords <- lapply(
-            group_xsplines,
-            function(coords) grid::xsplineGrob(x = coords$x,
-                                            y = coords$y,
-                                            shape = coords$shape,
-                                            open = FALSE)
-        )
-
-        xspline_points <- lapply(xspline_coords, grid::xsplinePoints)
-
-        xrange_old <- range(unlist(lapply(
-            xspline_points,
-            function(pts) as.numeric(pts$x)
-        )))
-        yrange_old <- range(unlist(lapply(
-            xspline_points,
-            function(pts) as.numeric(pts$y)
-        )))
-        xrange_new <- c(1 - alluvium_width/2, max(pbuilt$data[[3]]$x)
-                        + alluvium_width/2)
-        yrange_new <- c(0, sum(pbuilt$data[[3]]$count[pbuilt$data[[3]]$x == 1]))
-
-        new_range_transform <- function(x_old, range_old, range_new) {
-            (x_old - range_old[1])/(range_old[2] - range_old[1]) *
-            (range_new[2] - range_new[1]) + range_new[1]
-        }
-
-        polygon_coords <<- lapply(xspline_points, function(pts) {
-            x_trans <- new_range_transform(x_old = as.numeric(pts$x),
-                                        range_old = xrange_old,
-                                        range_new = xrange_new)
-            y_trans <- new_range_transform(x_old = as.numeric(pts$y),
-                                        range_old = yrange_old,
-                                        range_new = yrange_new)
-            list(x = x_trans, y = y_trans)
-        })
-    }
-
-    alluvial_tooltip <- function(plot_hover) {
-        node_width <- 1/3
-        if (!is.null(plot_hover)) {
-            hover <- plot_hover
-            x_coord <- round(hover$x)
-
-            if (abs(hover$x - x_coord) < (node_width / 2)) {
-                node_row <- pbuilt$data[[3]]$x == x_coord &
-                            hover$y > pbuilt$data[[3]]$ymin &
-                            hover$y < pbuilt$data[[3]]$ymax
-                node_label <- pbuilt$data[[3]]$stratum[node_row]
-                node_n <- pbuilt$data[[3]]$n[node_row]
-                offset <- 5
-
-                renderTags(
-                    tags$div(
-                        node_label, #tags$br(),
-                        #"n =", node_n,
-                        style = paste0(
-                        "position: absolute; ",
-                        "top: ", hover$coords_css$y + offset, "px; ",
-                        "left: ", hover$coords_css$x + offset, "px; ",
-                        "background: gray; ",
-                        "padding: 3px; ",
-                        "color: white; "
-                        )
-                    )
-                )$html
-            } else {
-                hover_within_flow <- sapply(
-                    polygon_coords,
-                    function(pol) point.in.polygon(point.x = hover$x,
-                                                    point.y = hover$y,
-                                                    pol.x = pol$x,
-                                                    pol.y = pol$y)
-                )
-                if (any(hover_within_flow)) {
-                    coord_id <- rev(which(hover_within_flow == 1))[1]
-                    flow_label <- paste(groups_to_draw[[coord_id]]$stratum, collapse = ' -> ')
-                    flow_n <- groups_to_draw[[coord_id]]$count[1]
-                    offset <- 5
-
-                    renderTags(
-                        tags$div(
-                            flow_label, #tags$br(),
-                            #"n =", flow_n,
-                            style = paste0(
-                                "position: absolute; ",
-                                "top: ", hover$coords_css$y + offset, "px; ",
-                                "left: ", hover$coords_css$x + offset, "px; ",
-                                "background: gray; ",
-                                "padding: 3px; ",
-                                "color: white; "
-                            )
-                        )
-                    )$html
-                }
-            }
-        }
-    }
-
     observeEvent(input$top_clones, {
         if (input$top_clones == "no") {
             shinyjs::disable("top_num")
@@ -1108,6 +1118,8 @@ server <- function(input, output, session) {
     }) %>%
     bindCache(count_kmers()) %>%
     bindEvent(input$kmer_distrib_button)
+
+# ------------------------------------------------------------------------------------------------------------------ #
 
     output$download <- downloadHandler(
         filename <- function() {
