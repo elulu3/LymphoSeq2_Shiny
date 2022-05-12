@@ -65,11 +65,11 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                 selectizeInput("word_id", label = "Select repertoire id", choices = NULL),
                 actionButton("word_button", label = "Create Word Cloud")),
             
-            conditionalPanel(condition = "input.tabselected == 'clonality_panel' && input.clonal_sub_tab == 'clonal_relate'",
+            conditionalPanel(condition = "input.tabselected == 'clonality_panel' && input.clonal_sub_tab == 'clonality'",
+                radioButtons("calc_relate", "Calculate clonal relatedness?",
+                                choices = c("yes", "no"), inline = TRUE),
                 numericInput("edit_dis", label = "Minimum edit distance the sequence must be less than or equal to:",
                                 value = 10, min = 0),
-                radioButtons("merge_results", "Merge results with clonality table?",
-                            choices = c("no", "yes"), inline = TRUE),
                 actionButton("clonal_relate_button", "Create Table")),
             
             conditionalPanel(condition = "input.tabselected == 'diff_abundance'",
@@ -143,9 +143,9 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                         tabPanel("Top Productive Sequences Table", value = "top_seq_table",
                             DT::dataTableOutput("top_seq_table") %>% withSpinner()),
                         tabPanel("Top Productive Sequences Plot", value = "top_seq_plot",
-                            plotlyOutput("top_seq_plot") %>% withSpinner()),                                    
+                            plotlyOutput("top_seq_plot", height = "600px") %>% withSpinner()),                                    
                         tabPanel("Unique Productive Sequences Plot", value = "produtive_seq_plot",
-                            plotlyOutput("productive_plot") %>% withSpinner()),
+                            plotlyOutput("productive_plot", height = "600px") %>% withSpinner()),
                         tabPanel("Unique Productive Sequences Table", value = "produtive_seq_table",
                             DT::dataTableOutput("produtive_seq_table") %>% withSpinner()),
                         id = "prod_seq_sub_tab"
@@ -157,7 +157,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                         tabPanel("Heat Map", value = "gene_freq_heat",
                             plotlyOutput("gene_freq_heat", height = "800px") %>% withSpinner()),
                         tabPanel("Bar Chart", value = "gene_freq_bar",
-                            plotlyOutput("gene_freq_bar") %>% withSpinner()),
+                            plotlyOutput("gene_freq_bar", height = "600px") %>% withSpinner()),
                         # tabPanel("Word Cloud", value = "gene_freq_word",
                         #     wordcloud2Output("gene_freq_word") %>% withSpinner()),
                         id = "gene_sub_tab"
@@ -166,8 +166,6 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                     tabsetPanel(
                         tabPanel("Clonality", value = "clonality",
                             DT::dataTableOutput("clonality") %>% withSpinner()),
-                        tabPanel("Clonal Relatedness", value = "clonal_relate",
-                            DT::dataTableOutput("clonal_relate") %>% withSpinner()),
                         tabPanel("Clonality Statistics", value = "clonality_stats",
                             DT::dataTableOutput("clonality_stats") %>% withSpinner()),
                         tabPanel("Clonality Plot", value = "clonality_plot",
@@ -181,7 +179,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                         tabPanel("Kmer Counts", value = "count_kmers",
                             DT::dataTableOutput("count_kmers") %>% withSpinner()),
                         tabPanel("Kmer Distribution", value = "kmer_distrib",
-                            plotlyOutput("kmer_distrib") %>% withSpinner()),
+                            plotlyOutput("kmer_distrib", height = "600px") %>% withSpinner()),
                         id = "kmer_sub_tab"
                     )),
                 tabPanel("Chord Diagram VDJ", value = "chord_diagram",
@@ -333,6 +331,7 @@ server <- function(input, output, session) {
 
     shinyjs::disable("top_num")
     shinyjs::disable("top_chord_num")
+    shinyjs::disable("edit_dis")
     rda_envir <<- NULL
 
     # Standardizes input files into AIRR-compliant format
@@ -411,8 +410,8 @@ server <- function(input, output, session) {
                 input$top_seq_button) {
             purrr::map(c("chord_diagram", "commonSeqs_venn", "commonSeqs_bar",
                             "commonSeqs_plot", "diff_abundance", "gene_freq_word",
-                            "clonal_relate", "clone_track",
-                            "top_seq_table", "top_deq_plot",
+                            "clonality", "clone_track",
+                            "top_seq_table", "top_seq_plot",
                             "count_kmers", "kmer_distrib"),
                     function(x) shinyjs::hide(x))
         }
@@ -512,6 +511,15 @@ server <- function(input, output, session) {
         }
     })
 
+# ------------------------------------------------------------------------------------------------------------------ #
+
+    output$table <- DT::renderDataTable({
+        airr_table <- airr_data() %>%
+                        # purrr::discard(~all(is.na(.) | . == "")) %>%
+                        DT::datatable(filter = "top", options = list(scrollX = TRUE))
+
+    })
+
     observeEvent(input$chord_button, {
         shinyjs::show("chord_diagram")
     })
@@ -522,15 +530,6 @@ server <- function(input, output, session) {
         } else {
             shinyjs::enable("top_chord_num")
         }
-    })
-
-# ------------------------------------------------------------------------------------------------------------------ #
-
-    output$table <- DT::renderDataTable({
-        airr_table <- airr_data() %>%
-                        # purrr::discard(~all(is.na(.) | . == "")) %>%
-                        DT::datatable(filter = "top", options = list(scrollX = TRUE))
-
     })
 
     chord_data <- reactive({
@@ -851,29 +850,35 @@ server <- function(input, output, session) {
             DT::datatable(filter = "top", options = list(scrollX = TRUE))
     })
 
-    output$clonality <- DT::renderDataTable({
-        clonality_data() %>%
-            DT::datatable(rownames = FALSE, filter = "top",
-                            options = list(scrollX = TRUE))
+    observeEvent(input$calc_relate, {
+        if (input$calc_relate == "no") {
+            shinyjs::disable("edit_dis")
+        } else {
+            shinyjs::enable("edit_dis")
+        }
     })
 
-    clone_relate_data <- reactive({
-        data_output <- LymphoSeq2::clonalRelatedness(airr_data(), editDistance = input$edit_dis)
-        if (input$merge_results == "yes") {
-            data_output <- merge(clonality_data(), data_output)
+    clone_data <- reactive({
+        clone_data_copy <- clonality_data()
+        if (input$calc_relate == "yes") {
+            clone_relate_data <- LymphoSeq2::clonalRelatedness(airr_data(), editDistance = input$edit_dis) %>%
+                                    select(clonalRelatedness)
+            clone_data_copy$clonal_relatedness <- clone_relate_data
         }
-        data_output
+        clone_data_copy
     })
 
     observeEvent(input$clonal_relate_button, {
-        shinyjs::show("clonal_relate")
+        shinyjs::show("clonality")
     })
 
-    output$clonal_relate <- DT::renderDataTable({
+    output$clonality <- DT::renderDataTable({
         input$clonal_relate_button
         isolate({
-            clone_relate_data() %>%
-                DT::datatable(filter = "top", options = list(scrollX = TRUE))
+            clone_data() %>%
+                DT::datatable(rownames = FALSE, filter = "top",
+                                options = list(scrollX = TRUE))
+
         })
     })
 
@@ -1156,9 +1161,7 @@ server <- function(input, output, session) {
                 data_output <- airr_data()
             } else if (input$tabselected == "clonality_panel") {
                 if (input$clonal_sub_tab == "clonality") {
-                    data_output <- clonality_data()
-                } else if (input$clonal_sub_tab == "clonal_relate") {
-                    data_output <- clone_relate_data()
+                    data_output <- clone_data()
                 } else if (input$clonal_sub_tab == "clonality_stats") {
                     data_output <- clone_stats_data()
                 } else if (input$clonal_sub_tab == "count_stats") {
