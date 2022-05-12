@@ -163,9 +163,7 @@ sequence must be less than or equal to. Edit distance is a way of quantifying ho
 
 #### 4. Clonality Plot
 
-#### 5. Sequencing Counts
-
-#### 6. Count Statistics
+#### 5. Count Statistics
 
 ### Explore K-mers
 
