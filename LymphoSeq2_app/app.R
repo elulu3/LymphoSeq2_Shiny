@@ -194,11 +194,11 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                         plotlyOutput("lorenz") %>% withSpinner()),
                 tabPanel("Clone Tracking", value = "clone_track", tags$div(
                         style = "position: relative;",
-                        plotOutput("clone_track",
+                        plotOutput("clone_track", height = "600px",
                         hover = hoverOpts(id = "clone_track_hover")) %>% withSpinner(),
                         htmlOutput("clone_track_tooltip"))),
                 tabPanel("Pairwise Similarity", value = "pairwise_sim",
-                        plotlyOutput("pairwise_sim") %>% withSpinner()),
+                        plotlyOutput("pairwise_sim", height = "600px") %>% withSpinner()),
                 tabPanel("Public TCRB Sequences", value = "public_tcrb_seq",
                         DT::dataTableOutput("public_tcrb") %>% withSpinner()),
                 tabPanel("Differential Abundance", value = "diff_abundance",
