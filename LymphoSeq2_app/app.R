@@ -172,8 +172,6 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
                             DT::dataTableOutput("clonality_stats") %>% withSpinner()),
                         tabPanel("Clonality Plot", value = "clonality_plot",
                             plotlyOutput("clonality_plot") %>% withSpinner()),
-                        tabPanel("Sequencing Counts", value = "seq_counts",
-                            DT::dataTableOutput("seq_count") %>% withSpinner()),
                         tabPanel("Count Statistics", value = "count_stats",
                             DT::dataTableOutput("stats_count") %>% withSpinner()),               
                         id = "clonal_sub_tab"
@@ -437,7 +435,7 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$tabselected, {
-        if (input$tabselected %in% c("airr_table", "seq_counts", "count_stats",
+        if (input$tabselected %in% c("airr_table", "count_stats",
                          "public_tcrb_seq", "diff_abundance") ||
                 input$tabselected == "common_panel" && input$common_sub_tab == "common_seq_table" ||
                 input$tabselected == "prod_seq_panel" && (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") ||
@@ -755,23 +753,6 @@ server <- function(input, output, session) {
 
     output$rarefaction_curve <- renderPlotly({
         LymphoSeq2::plotRarefactionCurve(airr_data())
-    })
-
-    seq_count_data <- reactive({
-        data_output <- clonality_data() %>%
-            select(repertoire_id, total_sequences,
-                    unique_productive_sequences, total_count)
-        data_output
-    })
-
-    output$seq_count <- DT::renderDataTable({
-        seq_count_data() %>%
-            DT::datatable(rownames = FALSE,
-                        colnames = c("Repertoire ID",
-                            "Total Sequences", "Unique Productive Sequences",
-                            "Total Count"),
-                        filter = "top",
-                        options = list(scrollX = TRUE))
     })
 
     stats_count_data <- reactive({
@@ -1180,8 +1161,6 @@ server <- function(input, output, session) {
                     data_output <- clone_relate_data()
                 } else if (input$clonal_sub_tab == "clonality_stats") {
                     data_output <- clone_stats_data()
-                } else if (input$clonal_sub_tab == "seq_counts") {
-                    data_output <- seq_count_data()
                 } else if (input$clonal_sub_tab == "count_stats") {
                     data_output <- stats_count_data()
                 }
