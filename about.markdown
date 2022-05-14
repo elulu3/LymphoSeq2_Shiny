@@ -1,18 +1,11 @@
 ---
 layout: default
 title: About
-permalink: /about/
+filename: about
 ---
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](https://jekyllrb.com/)
+LymphoSeq2 Shiny seeks to implement the [LymphoSeq2](https://github.com/WarrenLabFH/LymphoSeq2) R package as a web application. 
 
-You can find the source code for Minima at GitHub:
-[jekyll][jekyll-organization] /
-[minima](https://github.com/jekyll/minima)
+# LymphoSeq2
 
-You can find the source code for Jekyll at GitHub:
-[jekyll][jekyll-organization] /
-[jekyll](https://github.com/jekyll/jekyll)
-
-
-[jekyll-organization]: https://github.com/jekyll
+LymphoSeq2 is an R package that is built on the [LymphoSeq BioConductor](https://bioconductor.org/packages/release/bioc/html/LymphoSeq.html) package.

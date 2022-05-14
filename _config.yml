@@ -34,6 +34,14 @@ plugins:
   - jekyll-feed
   - jekyll-remote-theme
 
+# urls
+github:
+  is_project_page: true
+  repository_url: https://github.com/elulu3/LymphoSeq2_Shiny
+  repository_name: LymphoSeq2_Shiny
+  owner_url: https://github.com/elulu3
+  owner_name: elulu3
+
 # Exclude from processing.
 # The following items will not be processed, by default.
 # Any item listed under the `exclude:` key here will be automatically added to
