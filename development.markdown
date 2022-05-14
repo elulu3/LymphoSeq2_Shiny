@@ -1,5 +1,7 @@
 ---
 layout: default
+title: Development
+filename: development
 ---
 
 # Local Installation
