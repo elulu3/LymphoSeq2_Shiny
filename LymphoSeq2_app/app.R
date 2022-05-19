@@ -29,6 +29,9 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
         sidebarPanel(
             fileInput("airr_files", label = "Upload Files", multiple = TRUE, accept = c(".tsv", ".rda", ".RData")),
 
+            conditionalPanel(condition = "input.tabselected == 'airr_table'",
+                checkboxInput("hide_null", label = "Hide empty columns", value = FALSE)),
+
             conditionalPanel(condition = "input.tabselected == 'chord_diagram'",
                 selectizeInput("vdj_association", label = "Select VDJ Association",
                                 choices = c("", "VJ", "DJ")),
@@ -419,9 +422,9 @@ server <- function(input, output, session) {
                 input$tabselected == "clone_track") {
             purrr::map(c("common_table_id", "bar_id", "plot_id",
                             "venn_id", "diff_id", "track_id"),
-                        function(x) shiny::updateSelectizeInput(session, x, unique_prod_rep()))
-            shiny::updateSelectizeInput(session, "color_rep_id", choices = c("none", unique_prod_rep()))
-            shiny::updateSelectizeInput(session, "color_intersect", choices = c(""))
+                        function(x) shiny::updateSelectizeInput(session, inputId = x, choices = unique_prod_rep()))
+            shiny::updateSelectizeInput(session, inputId = "color_rep_id", choices = c("none", unique_prod_rep()))
+            shiny::updateSelectizeInput(session, inputId = "color_intersect", choices = c(""))
         }
         if (input$tabselected == "gene_panel") {
             nt_rep_id <- unique(productive_nt()[, "repertoire_id"])
@@ -514,10 +517,14 @@ server <- function(input, output, session) {
 # ------------------------------------------------------------------------------------------------------------------ #
 
     output$table <- DT::renderDataTable({
-        airr_table <- airr_data() %>%
-                        # purrr::discard(~all(is.na(.) | . == "")) %>%
-                        DT::datatable(filter = "top", options = list(scrollX = TRUE))
-
+        if (input$hide_null) {
+            airr_data() %>%
+                purrr::discard(~all(is.na(.) | . == "")) %>%
+                DT::datatable(filter = "top", options = list(scrollX = TRUE))
+        } else {
+            airr_data() %>%
+                DT::datatable(filter = "top", options = list(scrollX = TRUE))
+        }
     })
 
     observeEvent(input$chord_button, {
