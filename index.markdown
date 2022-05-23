@@ -60,7 +60,7 @@ Some things to note:
     - `study_table` is the AIRR-compliant datatable of the uploaded data
     - `productive_aa` is a datatable of productive amino acid sequences
     - `productive_nt` is a datatable of productive nucleotide sequences
-- `repertoire_ids` is in reference to
+- `repertoire_ids` is in reference to the repertoire identifier/name (this is sometimes the individual file name when each file holds one repertoire data)
 
 ### AIRR Data Table
 
@@ -70,7 +70,7 @@ Imports .tsv files exported by the Adaptive Biotechnologies ImmunoSEQ analyzer, 
 
 User will need to upload files.
 
-### Explore Common Productvie Sequences
+### Explore Common Productive Sequences
 
 #### 1. Data Table
 
@@ -235,7 +235,7 @@ User will need to select a mode to use for calculating pairwise similarity:
 - Sorensen
 - PSI
 
-These modes will measusre the amount of overlap between two samples. The output values will range from 0 to 1 where a 0 indiciates no shared sequence frequencies and a 1 indicates the sequence frequencies are identical. 
+These modes will measure the amount of overlap between two samples. The output values will range from 0 to 1 where a 0 indiciates no shared sequence frequencies and a 1 indicates the sequence frequencies are identical. 
 
 ### Public TCRB Sequences
 
