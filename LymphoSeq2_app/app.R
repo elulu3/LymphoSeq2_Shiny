@@ -410,6 +410,10 @@ server <- function(input, output, session) {
 
 # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
+    img_formats <- c("PDF" = ".pdf", "RData" = ".rda")
+    data_formats <- c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda")
+
+
     # When files are uploaded, the following should occur:
     #   - all plots should be cleared
     #   - all drop down selections should be updated to reflect upload data
@@ -430,9 +434,12 @@ server <- function(input, output, session) {
                 input$tabselected == "clone_track") {
             purrr::map(c("common_table_id", "bar_id", "plot_id",
                             "venn_id", "diff_id", "track_id"),
-                        function(x) shiny::updateSelectizeInput(session, inputId = x, choices = unique_prod_rep()))
-            shiny::updateSelectizeInput(session, inputId = "color_rep_id", choices = c("none", unique_prod_rep()))
-            shiny::updateSelectizeInput(session, inputId = "color_intersect", choices = c(""))
+                        function(x) shiny::updateSelectizeInput(session, inputId = x,
+                                                                choices = unique_prod_rep()))
+            shiny::updateSelectizeInput(session, inputId = "color_rep_id",
+                                        choices = c("none", unique_prod_rep()))
+            shiny::updateSelectizeInput(session, inputId = "color_intersect",
+                                        choices = c(""))
         }
         if (input$tabselected == "gene_panel") {
             nt_rep_id <- unique(productive_nt()[, "repertoire_id"])
@@ -441,7 +448,8 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$bar_id, {
-        shiny::updateSelectizeInput(session, "color_intersect", choices = input$bar_id)
+        shiny::updateSelectizeInput(session, "color_intersect",
+                                    choices = input$bar_id)
     })
 
     observeEvent(input$tabselected, {
@@ -452,30 +460,36 @@ server <- function(input, output, session) {
                 input$tabselected == "clonality_panel" && input$clonal_sub_tab != "clonality_plot" ||
                 input$tabselected == "gene_panel" && input$gene_sub_tab == "gene_freq_table" ||
                 input$tabselected == "kmer_panel" && input$kmer_sub_tab == "count_kmers") {
-            download_choices <- c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda")
+            download_choices <- data_formats
         } else {
-            download_choices <- c("PDF" = ".pdf", "RData" = ".rda")
+            download_choices <- img_formats
         }
-        shiny::updateRadioButtons(session, "download_type", choices = download_choices)
+        shiny::updateRadioButtons(session, "download_type",
+                                  choices = download_choices)
         if (input$tabselected == "diff_abundance") {
-            shiny::updateSelectizeInput(session, "diff_id", choices = unique_prod_rep())
+            shiny::updateSelectizeInput(session, "diff_id",
+                                        choices = unique_prod_rep())
         } else if (input$tabselected == "clone_track") {
-            shiny::updateSelectizeInput(session, "track_id", choices = unique_prod_rep())
+            shiny::updateSelectizeInput(session, "track_id",
+                                        choices = unique_prod_rep())
         }
     })
 
     update_common_tabs <- reactive({
         purrr::map(c("common_table_id", "bar_id", "color_intersect", "plot_id", "venn_id"),
-            function(x) shiny::updateSelectizeInput(session, x, choices = unique_prod_rep()))
-        shiny::updateSelectizeInput(session, "color_rep_id", choices = c("none", unique_prod_rep()))
+            function(x) shiny::updateSelectizeInput(session, x,
+                                                    choices = unique_prod_rep()))
+        shiny::updateSelectizeInput(session, "color_rep_id",
+                                    choices = c("none", unique_prod_rep()))
     })
 
     observeEvent(input$common_sub_tab, {
         if (input$common_sub_tab == "common_seq_table") {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
+                                      choices = data_formats)
         } else {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
+            shiny::updateRadioButtons(session, "download_type",
+                                      choices = img_formats)
         }
         update_common_tabs()
     })
@@ -488,41 +502,45 @@ server <- function(input, output, session) {
     observeEvent(input$gene_sub_tab, {
         if (input$gene_sub_tab == "gene_freq_table") {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
+                choices = data_formats)
         } else {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
+            shiny::updateRadioButtons(session, "download_type",
+                                      choices = img_formats)
         }
         update_gene_tabs()
     })
 
     observeEvent(input$clonal_sub_tab, {
         if (input$clonal_sub_tab == "clonality_plot") {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
+            shiny::updateRadioButtons(session, "download_type",
+                                      choices = img_formats)
         } else {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
+                                      choices = data_formats)
         }
     })
 
     observeEvent(input$prod_seq_sub_tab, {
         if (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
+                                      choices = data_formats)
         } else {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
+            shiny::updateRadioButtons(session, "download_type",
+                                      choices = img_formats)
         }
     })
 
     observeEvent(input$kmer_sub_tab, {
         if (input$kmer_sub_tab == "count_kmers") {
             shiny::updateRadioButtons(session, "download_type",
-                choices = c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda"))
+                                      choices = data_formats)
         } else {
-            shiny::updateRadioButtons(session, "download_type", choices = c("PDF" = ".pdf", "RData" = ".rda"))
+            shiny::updateRadioButtons(session, "download_type",
+                                      choices = img_formats)
         }
     })
 
-# ------------------------------------------------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------------------------------------------ # # nolint
 
     output$table <- DT::renderDataTable({
         if (input$hide_null) {
@@ -552,7 +570,7 @@ server <- function(input, output, session) {
             validate(
                 need(input$top_chord_num > 0, "Please enter number of top sequences.")
             )
-            chord_table <- LymphoSeq2::topSeqs(productive_table = productive_nt(), top = input$top_chord_num)
+            chord_table <- LymphoSeq2::topSeqs(productive_nt(), input$top_chord_num)
         } else {
             chord_table <- productive_nt()
         }
@@ -565,7 +583,9 @@ server <- function(input, output, session) {
             vj <- vj %>%
                 group_by(v_family, j_family) %>%
                 summarize(duplicate_count = n(), .groups = "drop") %>%
-                pivot_wider(id_cols=v_family, names_from = j_family, values_from = duplicate_count) 
+                pivot_wider(id_cols = v_family,
+                            names_from = j_family,
+                            values_from = duplicate_count)
             row_names <- vj$v_family
             vj <- vj %>%
                     dplyr::select(-v_family)
@@ -577,11 +597,14 @@ server <- function(input, output, session) {
         } else if (input$vdj_association == "DJ") {
             dj <- chord_table %>%
                 select(d_family, j_family) %>%
-                mutate(d_family = replace_na(d_family, "Unresolved"), j_family = replace_na(j_family, "Unresolved"))
+                mutate(d_family = replace_na(d_family, "Unresolved"),
+                       j_family = replace_na(j_family, "Unresolved"))
             dj <- dj %>%
                 group_by(d_family, j_family) %>%
                 summarize(duplicate_count = n(), .groups = "drop") %>%
-                pivot_wider(id_cols=d_family, names_from = j_family, values_from = duplicate_count)
+                pivot_wider(id_cols = d_family,
+                            names_from = j_family,
+                            values_from = duplicate_count)
             row_names <- dj$d_family
             dj <- dj %>%
                     dplyr::select(-d_family)
@@ -658,7 +681,9 @@ server <- function(input, output, session) {
     })
 
     common_seqs_plot <- reactive({
-        LymphoSeq2::commonSeqsPlot(input$plot_id[1], input$plot_id[2], productive_aa())
+        LymphoSeq2::commonSeqsPlot(input$plot_id[1],
+                                   input$plot_id[2],
+                                   productive_aa())
     })
 
     output$commonSeqs_plot <- renderPlotly({
