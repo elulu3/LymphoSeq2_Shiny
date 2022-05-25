@@ -314,35 +314,21 @@ ui <-
                 )
             )
         ),
+        # About page
         tabPanel(
             "About",
             fluidPage(
+                tags$h2("Full Documentation for LymphoSeq2_Shiny app here:", style = "font-size:30px"),
+                tags$br(),
+                tags$a(href = "https://elulu3.github.io/LymphoSeq2_Shiny/", "LymphoSeq2_Shiny Documentation", style = "font-size:20px"),
                 tags$h2("More about the LymphoSeq2 package here:", style = "font-size:30px"),
                 tags$br(),
-                tags$a(href = "https://shashidhar22.github.io/LymphoSeq2/",
-                        "LymphoSeq2 Package Website", style = "font-size:20px"),
+                tags$a(href = "https://shashidhar22.github.io/LymphoSeq2/", "LymphoSeq2 Package Website", style = "font-size:20px"),
                 tags$br(), tags$br(),
-                tags$a(href = "https://github.com/shashidhar22/LymphoSeq2",
-                        "LymphoSeq2 on Github", style = "font-size:20px")
+                tags$a(href = "https://github.com/shashidhar22/LymphoSeq2", "LymphoSeq2 on Github", style = "font-size:20px")
             )
         )
     )
-    )
-),
-    # About page
-    tabPanel(
-        "About",
-        fluidPage(
-            tags$h2("Full Documentation for LymphoSeq2_Shiny app here:", style = "font-size:30px"),
-            tags$br(),
-            tags$a(href = "https://elulu3.github.io/LymphoSeq2_Shiny/", "LymphoSeq2_Shiny Documentation", style = "font-size:20px"),
-            tags$h2("More about the LymphoSeq2 package here:", style = "font-size:30px"),
-            tags$br(),
-            tags$a(href = "https://shashidhar22.github.io/LymphoSeq2/", "LymphoSeq2 Package Website", style = "font-size:20px"),
-            tags$br(), tags$br(),
-            tags$a(href = "https://github.com/shashidhar22/LymphoSeq2", "LymphoSeq2 on Github", style = "font-size:20px")
-        ))
-)
 
 "%then%" <- function(a, b) {
     if (is.null(a)) b else a
