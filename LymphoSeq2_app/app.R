@@ -16,7 +16,8 @@ library(shinyjs)
 library(wordcloud2)
 library(shinyalert)
 
-options(shiny.maxRequestSize = 500 * 1024^2)
+# max upload size (current: 8 GB)
+options(shiny.maxRequestSize = 8000 * 1024^2)
 
 
 ui <- 
@@ -208,8 +209,12 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
     )
 )
 ),
+    # About page
     tabPanel("About",
         fluidPage(
+            tags$h2("Full Documentation for LymphoSeq2_Shiny app here:", style = "font-size:30px"),
+            tags$br(),
+            tags$a(href = "https://elulu3.github.io/LymphoSeq2_Shiny/", "LymphoSeq2_Shiny Documentation", style = "font-size:20px"),
             tags$h2("More about the LymphoSeq2 package here:", style = "font-size:30px"),
             tags$br(),
             tags$a(href = "https://shashidhar22.github.io/LymphoSeq2/", "LymphoSeq2 Package Website", style = "font-size:20px"),
@@ -222,6 +227,7 @@ navbarPage("LymphoSeq2 Application", theme = shinythemes::shinytheme("cerulean")
     if (is.null(a)) b else a
 }
 
+# Code for alluvial plots interactive
 interactive_alluvial <- function(p) {
     alluvium_width <- 1/3
     pbuilt <<- ggplot_build(p)
@@ -269,6 +275,7 @@ interactive_alluvial <- function(p) {
     })
 }
 
+# Generates tooltip for alluvial plots
 alluvial_tooltip <- function(plot_hover) {
     node_width <- 1/3
     if (!is.null(plot_hover)) {
@@ -355,7 +362,8 @@ server <- function(input, output, session) {
                 table
             } else if (tools::file_ext(input$airr_files$name) == "rda") {
                 rda_envir <<- new.env()
-                name <- load(input$airr_files$datapath, envir = rda_envir)
+                load(input$airr_files$datapath, envir = rda_envir)
+                print("dbjakf")
                 rda_envir$study_table
             }
         },
@@ -367,7 +375,7 @@ server <- function(input, output, session) {
         )
     })
 
-    # Computes the productive amino acid sequences
+    # Filters for productive amino acid sequences
     productive_aa <- reactive({
         if (is.null(rda_envir)) {
             LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction_aa")
@@ -376,7 +384,7 @@ server <- function(input, output, session) {
         }
     })
 
-    # Computes the productive nucleotide sequences
+    # Filters for productive nucleotide sequences
     productive_nt <- reactive({
         if (is.null(rda_envir)) {
             LymphoSeq2::productiveSeq(study_table = airr_data(), aggregate = "junction")
@@ -385,13 +393,13 @@ server <- function(input, output, session) {
         }
     })
 
-    # Grabs all the unique productive amino acid sequences.
+    # Grabs all unqiue repertoire ids.
     # Intended to be used for drop down selection.
     unique_prod_rep <- reactive({
         unique(productive_aa()[, "repertoire_id"])
     })
 
-    # Computes the clonality data
+    # Computes the summary statistics table
     clonality_data <- reactive({
         if (is.null(rda_envir)) {
             LymphoSeq2::clonality(airr_data())
@@ -400,7 +408,7 @@ server <- function(input, output, session) {
         }
     })
 
-# ------------------------------------------------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------------------------------------------ # # nolint
 
     # When files are uploaded, the following should occur:
     #   - all plots should be cleared
