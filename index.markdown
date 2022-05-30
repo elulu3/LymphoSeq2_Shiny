@@ -70,7 +70,7 @@ Imports .tsv files exported by the Adaptive Biotechnologies ImmunoSEQ analyzer, 
 
 User will need to upload files.
 
-### Explore Common Productive Sequences
+### Explore Repertoire Overlap
 
 #### 1. Data Table
 
@@ -105,6 +105,21 @@ Users will need to select two repertoire ids to compare.
 Outputs a venn diagram that compares the number of common sequences in two or three repertoire ids.
 
 Users will need to select two or three repertoire ids to compare.
+
+#### Paiwise Similarity
+
+    similarity_matrix <- LymphoSeq2::scoringMatrix(productive_aa, mode)
+    LymphoSeq2::pairwisePlot(similarity_matrix)
+
+Outputs a heat map showing pairwise comparisons using the Bhattacharyya Coefficient, Similarity Score, Sorensen Index, or Percent Similarity Index calculation. 
+
+User will need to select a mode to use for calculating pairwise similarity:
+- Bhattacharyya
+- Similarity
+- Sorensen
+- PSI
+
+These modes will measure the amount of overlap between two samples. The output values will range from 0 to 1 where a 0 indiciates no shared sequence frequencies and a 1 indicates the sequence frequencies are identical. 
 
 ### Explore Productive Sequences
 
@@ -220,22 +235,7 @@ Outputs a Lorenz curve derived from the frequency of the amino acid sequences.
 
 Outputs an alluvial plot tracking amino acid frequencies across multiple samples.
 
-User will need to select whether to track a top number of clones or all clones and selects repertoire_ids to visualize. 
-
-### Paiwise Similarity
-
-    similarity_matrix <- LymphoSeq2::scoringMatrix(productive_aa, mode)
-    LymphoSeq2::pairwisePlot(similarity_matrix)
-
-Outputs a heat map showing pairwise comparisons using the Bhattacharyya Coefficient, Similarity Score, Sorensen Index, or Percent Similarity Index calculation. 
-
-User will need to select a mode to use for calculating pairwise similarity:
-- Bhattacharyya
-- Similarity
-- Sorensen
-- PSI
-
-These modes will measure the amount of overlap between two samples. The output values will range from 0 to 1 where a 0 indiciates no shared sequence frequencies and a 1 indicates the sequence frequencies are identical. 
+User will need to select repertoire_ids to visualize. Users will also have to make the selection to track all clones or to track the top number of clones, in which the user provides the number of clones to track. The default for this choice is tracking the top 50 clones. Users can also choose to track specific amino acid sequences. 
 
 ### Public TCRB Sequences
 
