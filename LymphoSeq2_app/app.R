@@ -16,8 +16,8 @@ library(shinyjs)
 library(wordcloud2)
 library(shinyalert)
 
-# max upload size (current: 8 GB)
-options(shiny.maxRequestSize = 8000 * 1024^2)
+# max upload size (current: 1 GB)
+options(shiny.maxRequestSize = 1000 * 1024^2)
 
 
 ui <-
@@ -125,7 +125,7 @@ ui <-
                             ),
                             numericInput("top_num", "Number of top clones to map:", value = 50, min = 1),
                             radioButtons("track_aa_choice", "Track specific amino acid sequences?",
-                                choices = c("yes", "no"), inline = TRUE
+                                choices = c("yes", "no"), selected = "no", inline = TRUE
                             ),
                             selectizeInput("track_aa",
                                 label = "Select amino acid sequences to track",
@@ -476,13 +476,13 @@ server <- function(input, output, session) {
                 } else if (tools::file_ext(input$airr_files$name) == "rda") {
                     rda_envir <<- new.env()
                     name <- load(input$airr_files$datapath, envir = rda_envir)
-                    rda_envir$study_table
+                    rda_envir$nucleotide_table
                 }
             },
             error = function(e) {
                 shinyalert::shinyalert("Cannot read data format.",
-                    "Please upload other files.",
-                    type = "error"
+                                       "Please upload other files.",
+                                       type = "error"
                 )
                 return()
             }
@@ -509,12 +509,6 @@ server <- function(input, output, session) {
         }
     })
 
-    # Grabs all unqiue repertoire ids.
-    # Intended to be used for drop down selection.
-    unique_prod_rep <- reactive({
-        unique(productive_aa()[, "repertoire_id"])
-    })
-
     # Computes the summary statistics table
     clonality_data <- reactive({
         if (is.null(rda_envir)) {
@@ -529,6 +523,18 @@ server <- function(input, output, session) {
     img_formats <- c("PDF" = ".pdf", "RData" = ".rda")
     data_formats <- c("TSV" = ".tsv", "EXCEL" = ".xlsx", "RData" = ".rda")
 
+    # Grabs all unqiue repertoire ids.
+    # Intended to be used for drop down selection.
+    unique_prod_rep <- reactive({
+        unique(productive_aa()[, "repertoire_id"])
+    })
+
+    unique_prod_aa <- reactive({
+        unique_aa <- unique(productive_aa()[, "junction_aa"])
+        df <- data.frame(value = unique_aa, label = unique_aa)
+        colnames(df) <- c("value", "label")
+        df
+    })
 
     # When files are uploaded, the following should occur:
     #   - all plots should be cleared
@@ -590,17 +596,19 @@ server <- function(input, output, session) {
         } else {
             download_choices <- img_formats
         }
-        shiny::updateRadioButtons(session, "download_type",
+        shiny::updateRadioButtons(session, inputId = "download_type",
                                   choices = download_choices)
         if (input$tabselected == "diff_abundance") {
-            shiny::updateSelectizeInput(session, "diff_id",
+            shiny::updateSelectizeInput(session, inputId = "diff_id",
                                         choices = unique_prod_rep())
         } else if (input$tabselected == "clone_track") {
-            shiny::updateSelectizeInput(session, "track_id",
+            shiny::updateSelectizeInput(session, inputId = "track_id",
                                         choices = unique_prod_rep())
         }
     })
 
+    # Logic for updating repertoire_id selections for
+    # "Explore Repertoire Overlap"
     update_common_tabs <- reactive({
         purrr::map(
             c("common_table_id", "bar_id", "color_intersect", "plot_id", "venn_id"),
@@ -612,6 +620,9 @@ server <- function(input, output, session) {
                                     choices = c("none", unique_prod_rep()))
     })
 
+    # When "Explore Repertoire Overlap" tab is clicked, the following occurs:
+    #   - download options are updated for each sub tabs
+    #   - repertoire_id selections are updated
     observeEvent(input$common_sub_tab, {
         if (input$common_sub_tab == "common_seq_table") {
             shiny::updateRadioButtons(session, "download_type",
@@ -623,6 +634,8 @@ server <- function(input, output, session) {
         update_common_tabs()
     })
 
+    # Logic for updating repertoire_id selections for
+    # "Explore Gene Frequencies"
     update_gene_tabs <- reactive({
         shiny::updateSelectizeInput(session, "word_id",
             choices = unique(productive_nt()[, "repertoire_id"])
@@ -695,6 +708,7 @@ server <- function(input, output, session) {
         }
     })
 
+    # Compute data table to create VDJ chord diagram 
     chord_data <- reactive({
         if (input$top_seq_chord == "yes") {
             validate(
@@ -745,6 +759,7 @@ server <- function(input, output, session) {
         }
     })
 
+    # Outputs an interactive chord diagram with caching
     output$chord_diagram <- renderChorddiag({
         input$chord_button
         isolate({
@@ -767,6 +782,7 @@ server <- function(input, output, session) {
         shinyjs::show("common_seqs_bar")
     })
 
+    # Computes data table for UpSetR bar plot of common sequences
     common_bar_data <- reactive({
         color_rep_id <- input$color_rep_id
         color_intersect <- input$color_intersect
@@ -783,6 +799,8 @@ server <- function(input, output, session) {
         )
     })
 
+    # Outputs UpSetR bar plot of common sequences
+    # Error message will show when there are no common sequences
     output$common_seqs_bar <- renderPlot({
         input$bar_button
         isolate({
@@ -799,19 +817,17 @@ server <- function(input, output, session) {
                     %then%
                     need(
                         is.null(input$color_intersect) || input$color_intersect == "none" ||
-                            length(input$color_intersect) > 1,
+                                length(input$color_intersect) > 1,
                         "Please select at least 2 repertoire ids"
                     )
             )
-            tryCatch(
-                {
-                    common_bar_data()
-                },
+            tryCatch({
+                common_bar_data()
+            },
                 error = function(e) {
                     shinyalert::shinyalert("No Common Sequences!",
                         "Select different repertoire ids.",
-                        type = "error"
-                    )
+                        type = "error")
                     return()
                 }
             )
@@ -822,12 +838,15 @@ server <- function(input, output, session) {
         shinyjs::show("common_seqs_plot")
     })
 
+    # Creates scatterplot of common sequences
     common_seqs_plot <- reactive({
         LymphoSeq2::commonSeqsPlot(input$plot_id[1],
                                    input$plot_id[2],
                                    productive_aa())
     })
 
+    # Outputs interactive scatterplot of common sequences
+    # Error message will show when there are no common sequences
     output$common_seqs_plot <- renderPlotly({
         input$plot_button
         isolate({
@@ -853,6 +872,7 @@ server <- function(input, output, session) {
         shinyjs::show("common_seqs_venn")
     })
 
+    # Creates Venn diagram of common sequences
     common_venn_data <- reactive({
         if (length(input$venn_id) == 2) {
             a <- productive_aa() %>%
@@ -933,6 +953,7 @@ server <- function(input, output, session) {
         data_output
     })
 
+    # Outputs a Venn diagram of common sequences
     output$common_seqs_venn <- renderPlot({
         input$venn_button
         isolate({
@@ -946,6 +967,7 @@ server <- function(input, output, session) {
         })
     })
 
+    # Creates a pairwise comparison heat map of repertoires
     pairwise_sim_data <- reactive({
         similarity <- LymphoSeq2::scoringMatrix(productive_aa(), mode = input$mode)
         LymphoSeq2::pairwisePlot(matrix = similarity) +
@@ -955,11 +977,13 @@ server <- function(input, output, session) {
             theme(legend.position = c(0.8, 0.8))
     })
 
+    # Ouputs an interacitve pairwise comparison heat map with caching
     output$pairwise_sim <- renderPlotly({
         plotly::ggplotly(pairwise_sim_data())
     }) %>%
         bindCache(productive_aa(), input$mode)
 
+    # Creates a Lorenz curve
     lorenz_data <- reactive({
         repertoire_ids <- productive_aa() %>%
             dplyr::pull(repertoire_id) %>%
@@ -968,10 +992,12 @@ server <- function(input, output, session) {
             ggplot2::coord_fixed(1 / 2)
     })
 
+    # Ouputs an interactive line plot of the Lorenz curve
     output$lorenz <- renderPlotly({
         lorenz_data()
     })
 
+    # Outputs an interative line plot of rarefactionan curves for repertoires
     output$rarefaction_curve <- renderPlotly({
         LymphoSeq2::plotRarefactionCurve(airr_data())
     })
@@ -1170,6 +1196,8 @@ server <- function(input, output, session) {
         if (input$track_aa_choice == "no") {
             shinyjs::disable("track_aa")
         } else {
+            shiny::updateSelectizeInput(session, inputId = "track_aa",
+                                        choices = unique_prod_aa(), server = TRUE)
             shinyjs::enable("track_aa")
         }
     })
@@ -1179,18 +1207,24 @@ server <- function(input, output, session) {
     })
 
     clone_track_data <- reactive({
+        clone_track_table <- productive_aa()
+        aa_list <- NULL
         if (input$top_clones == "yes") {
             validate(
                 need(input$top_num > 0, "Please enter a number for tracking top clones")
             )
-            ttable <- LymphoSeq2::topSeqs(productive_aa(), top = input$top_num)
-            ctable <- LymphoSeq2::cloneTrack(ttable, sample_list = input$track_id)
-        } else {
-            ctable <- LymphoSeq2::cloneTrack(productive_aa(), sample_list = input$track_id)
+            clone_track_table <- LymphoSeq2::topSeqs(productive_aa(), top = input$top_num)
+        } 
+        if (input$track_aa_choice == "yes") {
+            validate (
+                need(length(input$track_aa) > 0, "Please select amino acid sequences to track")
+            )
+            aa_list <- input$track_aa
         }
+        ctable <- LymphoSeq2::cloneTrack(productive_aa(), alist <- aa_list,
+                                         sample_list = input$track_id)
         ctable <- dplyr::left_join(data.frame(repertoire_id = input$track_id),
-            ctable,
-            by = "repertoire_id"
+                                   ctable, by = "repertoire_id"
         )
         LymphoSeq2::plotTrack(clone_table = ctable)
     })
@@ -1201,8 +1235,16 @@ server <- function(input, output, session) {
             validate(
                 need(length(input$track_id) > 0, "Please select repertoire ids to track")
             )
-            interactive_alluvial(clone_track_data())
-            clone_track_data()
+            tryCatch({
+                interactive_alluvial(clone_track_data())
+                clone_track_data()
+            },
+            error = function(e) {
+                shinyalert::shinyalert("Amino acid sequences not found",
+                                       "Please select other amino acid sequences
+                                            or increase number of top clones to plot.",
+                                        type = "error")
+            })
             # + geom_label(stat = "stratum", aes(label = after_stat(stratum))) +
             # theme(legend.position = "right")
         })
@@ -1225,18 +1267,18 @@ server <- function(input, output, session) {
 
     gene_heatmap_data <- reactive({
         genes <- LymphoSeq2::geneFreq(productive_nt(), locus = input$locus, family = input$family_bool) %>%
-            pivot_wider(
-                id_cols = gene_name,
-                names_from = repertoire_id,
-                values_from = gene_frequency,
-                values_fn = sum,
-                values_fill = 0
-            )
+                    tidyr::pivot_wider(
+                            id_cols = gene_name,
+                            names_from = repertoire_id,
+                            values_from = gene_frequency,
+                            values_fn = sum,
+                            values_fill = 0
+                    )
         gene_names <- genes %>%
-            pull(gene_name)
+                        dplyr::pull(gene_name)
         genes <- genes %>%
-            select(-gene_name) %>%
-            as.matrix()
+                    dplyr::select(-gene_name) %>%
+                    as.matrix()
         rownames(genes) <- gene_names
         genes
     })
