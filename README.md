@@ -9,16 +9,18 @@ The following packages are used by LymphoSeq2_Shiny and will need to be installe
 1. shiny
 2. shinyjs
 3. shinycssloaders
-4. ggplot2
-5. plotly
-6. DT
-7. heatmaply
-8. pheatmap
-9. wordcloud2
-10. tidyverse
-11. htmltools
-12. sp
-13. writexl
+4. shinytheme
+5. shinyalert
+6. ggplot2
+7. plotly
+8. DT
+9. heatmaply
+10. pheatmap
+11. wordcloud2
+12. tidyverse
+13. htmltools
+14. sp
+15. writexl
 
 These packages will also need to be installed under special instructions:
 
