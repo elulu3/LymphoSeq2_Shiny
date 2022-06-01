@@ -1,7 +1,7 @@
 ---
 layout: default
 title: LymphoSeq2 Shiny
-filename: /
+filename: 
 ---
 
 # Providing Inputs to the Application
