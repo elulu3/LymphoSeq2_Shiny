@@ -8,7 +8,7 @@ All of the required packages will be automtically installed when the application
 
 ### Installing LymphoSeq2
 
-The LymphoSeq2 Shiny application is currently using a developmental version of LymphoSeq2, which will need to be downloaded from the source code. First, head to [LymphoSeq2's git repository](https://github.com/WarrenLabFH/LymphoSeq2).
+The LymphoSeq2 Shiny application is currently using a developmental version of LymphoSeq2, which will need to be downloaded from the [source code](https://github.com/WarrenLabFH/LymphoSeq2).
 
 1. Get a copy of LymphoSeq2 by running the following command in the terminal (in whatever directory you want this in):
    
