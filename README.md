@@ -1,57 +1,42 @@
 # LymphoSeq2_Shiny
 
-LymphoSeq2_Shiny is an interactive web application of [LymphoSeq2](https://github.com/shashidhar22/LymphoSeq2/tree/v0.0.0.9000) built with the R/Shiny package. This Shiny application will allow you to upload Adaptive Immune Receptor Repertoire Sequencing (AIRR-seq) data to display and perform various analytical visualizations. All graphical visualizations are available to be downloaded as PDF or RData files. All Data tables will be available to be downloaded as TSV, Excel, and RData files.
+LymphoSeq2_Shiny is an interactive web application of [LymphoSeq2](https://github.com/shashidhar22/LymphoSeq2/tree/v0.0.0.9000) built with the R/Shiny package. This Shiny application will allow you to upload Adaptive Immune Receptor Repertoire Sequencing (AIRR-seq) data to display and perform various analytical visualizations. All graphical visualizations are available to be downloaded as PDF or RData files. All Data tables will be available to be downloaded as TSV, Excel, or RData files.
 
-## Required Packages
+## Dependencies
 
-The following packages are used by LymphoSeq2_Shiny and will need to be installed through the R console (if not already) before running the application: 
+All of the required packages will be automtically installed when the application is run. However, the user will need to manually install **LymphoSeq2**. Instructions are below.
 
-1. shiny
-2. shinyjs
-3. shinycssloaders
-4. ggplot2
-5. plotly
-6. DT
-7. heatmaply
-8. pheatmap
-9. wordcloud2
-10. tidyverse
-11. htmltools
-12. sp
-13. writexl
+### Installing LymphoSeq2
 
-These packages will also need to be installed under special instructions:
+The LymphoSeq2 Shiny application is currently using a developmental version of LymphoSeq2, which will need to be downloaded from the [source code](https://github.com/WarrenLabFH/LymphoSeq2).
 
-1. LymphoSeq2
+1. Get a copy of LymphoSeq2 by running the following command in the terminal (in whatever directory you want this in):
    
-   The **LymphoSeq2** package can be installed from Github:
    ```
-   # install the devtools package first (if not already)
+   git clone https://github.com/WarrenLabFH/LymphoSeq2.git
+   ```
+   
+2. As of June 2022, the branch v1 has the latest updates, and so this is the version of LymphoSeq2 we will be interested in installing. Run the following commands to get to v1: 
+
+   ```
+   cd LymphoSeq2
+   
+   git checkout v1
+   ```
+
+3. After we are in the v1 branch, we can open an R session in the LymphoSeq2 directory and download LymphoSeq2 as package with the following commands:
+
+   ```
+   radian
+   
+   # install the devtools package first (skip if already installed)
    install.packages("devtools")
    
    # load devtools package
    library(devtools)
 
-   devtools::install_github("shashidhar22/LymphoSeq2", build_vignette = FALSE)
-   ```
-
-2. ggalluvial
-  
-   This application uses the developmental version of **ggalluvial** and needs to be installed from Github using the following commands:
-   ```
-   # install the remotes package first (if not already)
-   install.packages("remotes")
-   
-   # load remotes package
-   library(remotes)
-  
-   remotes::install_github("corybrunson/ggalluvial@main", build_vignettes = FALSE)
-   ```
-3. chorddiag
-   
-   The **chordiagg** package may be incomaptible with newer versions of R. If this is the case, the developmental package will need to be installed directly from Github using the `devtools` package:
-   ```
-   devtools::install_github("mattflor/chorddiag", build_vignettes = FALSE)
+   # install LymphoSeq2
+   install()
    ```
 
 ## Running the Application
