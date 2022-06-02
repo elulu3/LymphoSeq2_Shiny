@@ -1,20 +1,20 @@
-library(shiny)
-library(shinycssloaders)
+# Install dependencies if missing
+required_packages <- c("shinyjs", "shinycssloaders", "shinythemes", "shinyalert",
+                       "ggplot2", "plotly", "DT", "heatmaply", "pheatmap",
+                       "tidyverse", "htmltools", "sp", "writexl", "wordcloud2",
+                       "remotes", "devtools")
+lapply(required_packages,
+       function(x) if (!require(x, character.only = TRUE)) install.packages(x))
+
+if (!require("ggalluvial", character.only = TRUE)) {
+    remotes::install_github("corybrunson/ggalluvial@main", build_vignettes = FALSE)
+}
+if (!require("chorddiag", character.only = TRUE)) {
+    devtools::install_github("mattflor/chorddiag", build_vignettes = FALSE)
+}
 library(LymphoSeq2)
-library(DT)
-library(tidyverse)
-library(ggplot2)
-library(plotly)
-library(heatmaply)
-library(pheatmap)
-library(ggalluvial)
-library(htmltools)
-library(sp)
-library(chorddiag)
-library(writexl)
-library(shinyjs)
-library(wordcloud2)
-library(shinyalert)
+
+# ------------------------------------------------------------------------------------------------------------------ # # nolint
 
 # max upload size (current: 1 GB)
 options(shiny.maxRequestSize = 1000 * 1024^2)
@@ -469,7 +469,7 @@ server <- function(input, output, session) {
                     in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
                     in_files <- unlist(in_files)
                     table <- table %>%
-                        mutate(repertoire_id = if_else(as.integer(repertoire_id) <= length(in_files),
+                        dplyr::mutate(repertoire_id = if_else(as.integer(repertoire_id) <= length(in_files),
                             in_files[as.integer(repertoire_id) + 1], "unknown"
                         ))
                     table
@@ -512,7 +512,7 @@ server <- function(input, output, session) {
     # Computes the summary statistics table
     clonality_data <- reactive({
         if (is.null(rda_envir)) {
-            LymphoSeq2::clonality(airr_data())
+            LymphoSeq2::clonality(study_table = airr_data())
         } else {
             rda_envir$summary_table
         }
@@ -720,17 +720,17 @@ server <- function(input, output, session) {
         }
         if (input$vdj_association == "VJ") {
             vj <- chord_table %>%
-                select(v_family, j_family) %>%
-                mutate(
-                    v_family = replace_na(v_family, "Unresolved"),
-                    j_family = replace_na(j_family, "Unresolved")
+                dplyr::select(v_family, j_family) %>%
+                dplyr::mutate(
+                    v_family = tidyr::replace_na(v_family, "Unresolved"),
+                    j_family = tidyr::replace_na(j_family, "Unresolved")
                 )
             vj <- vj %>%
-                group_by(v_family, j_family) %>%
-                summarize(duplicate_count = n(), .groups = "drop") %>%
-                pivot_wider(id_cols = v_family,
-                            names_from = j_family,
-                            values_from = duplicate_count)
+                dplyr::group_by(v_family, j_family) %>%
+                dplyr::summarize(duplicate_count = n(), .groups = "drop") %>%
+                tidyr::pivot_wider(id_cols = v_family,
+                                   names_from = j_family,
+                                   values_from = duplicate_count)
             row_names <- vj$v_family
             vj <- vj %>%
                 dplyr::select(-v_family)
@@ -740,15 +740,15 @@ server <- function(input, output, session) {
             vj
         } else if (input$vdj_association == "DJ") {
             dj <- chord_table %>%
-                select(d_family, j_family) %>%
-                mutate(d_family = replace_na(d_family, "Unresolved"),
-                       j_family = replace_na(j_family, "Unresolved"))
+                dplyr::select(d_family, j_family) %>%
+                dplyr::mutate(d_family = replace_na(d_family, "Unresolved"),
+                              j_family = replace_na(j_family, "Unresolved"))
             dj <- dj %>%
-                group_by(d_family, j_family) %>%
-                summarize(duplicate_count = n(), .groups = "drop") %>%
-                pivot_wider(id_cols = d_family,
-                            names_from = j_family,
-                            values_from = duplicate_count)
+                dplyr::group_by(d_family, j_family) %>%
+                dplyr::summarize(duplicate_count = n(), .groups = "drop") %>%
+                tidyr::pivot_wider(id_cols = d_family,
+                                   names_from = j_family,
+                                   values_from = duplicate_count)
             row_names <- dj$d_family
             dj <- dj %>%
                 dplyr::select(-d_family)
@@ -766,7 +766,6 @@ server <- function(input, output, session) {
             validate(
                 need(input$vdj_association != "", "Please select VDJ Association")
             )
-            print(chord_data())
             chorddiag::chorddiag(chord_data(),
                 type = "bipartite",
                 showTicks = FALSE,
@@ -775,8 +774,8 @@ server <- function(input, output, session) {
             )
         })
     }) %>%
-        bindCache(chord_data()) %>%
-        bindEvent(input$chord_button)
+        shiny::bindCache(chord_data()) %>%
+        shiny::bindEvent(input$chord_button)
 
     observeEvent(input$bar_button, {
         shinyjs::show("common_seqs_bar")
@@ -981,7 +980,7 @@ server <- function(input, output, session) {
     output$pairwise_sim <- renderPlotly({
         plotly::ggplotly(pairwise_sim_data())
     }) %>%
-        bindCache(productive_aa(), input$mode)
+        shiny::bindCache(productive_aa(), input$mode)
 
     # Creates a Lorenz curve
     lorenz_data <- reactive({
@@ -1003,26 +1002,25 @@ server <- function(input, output, session) {
     })
 
     stats_count_data <- reactive({
-        stats <- clonality_data() %>%
-            select(
+        clonality_data() %>%
+            splyr::select(
                 repertoire_id, total_sequences,
                 unique_productive_sequences, total_count
             ) %>%
-            pivot_longer(!repertoire_id,
+            tidyr::pivot_longer(!repertoire_id,
                 names_to = "metric",
                 values_to = "values"
             ) %>%
-            group_by(metric) %>%
-            summarize(
+            dplyr::group_by(metric) %>%
+            dplyr::summarize(
                 Total = sum(values),
                 Mean = mean(values),
                 Minimum = min(values),
                 Maximum = max(values)
             ) %>%
-            drop_na() %>%
-            ungroup() %>%
-            mutate(metric = str_to_title(str_replace_all(metric, "_", " ")))
-        stats
+            tidyr::drop_na() %>%
+            dplyr::ungroup() %>%
+            dplyr::mutate(metric = str_to_title(str_replace_all(metric, "_", " ")))
     })
 
     output$stats_count <- DT::renderDataTable({
@@ -1039,7 +1037,7 @@ server <- function(input, output, session) {
     })
 
     prod_plot_data <- reactive({
-        ggplot(data = clonality_data(), aes(x = repertoire_id, y = unique_productive_sequences)) +
+        ggplot2::ggplot(data = clonality_data(), aes(x = repertoire_id, y = unique_productive_sequences)) +
             geom_bar(stat = "identity", position = position_dodge(), fill = "#3182bd") +
             theme_minimal() +
             theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), text = element_text(size = 10)) +
@@ -1067,7 +1065,7 @@ server <- function(input, output, session) {
 
     top_prod_seq_data <- reactive({
         LymphoSeq2::topSeqs(productive_aa(), input$top_seq_num) %>%
-            select(
+            dplyr::select(
                 repertoire_id, junction_aa, duplicate_count, duplicate_frequency,
                 v_call, d_call, j_call
             )
@@ -1122,7 +1120,7 @@ server <- function(input, output, session) {
         clone_data_copy <- clonality_data()
         if (input$calc_relate == "yes") {
             clone_relate_data <- LymphoSeq2::clonalRelatedness(airr_data(), editDistance = input$edit_dis) %>%
-                select(clonalRelatedness)
+                                    dplyr::select(clonalRelatedness)
             clone_data_copy$clonal_relatedness <- clone_relate_data
         }
         clone_data_copy
@@ -1145,20 +1143,20 @@ server <- function(input, output, session) {
 
     clone_stats_data <- reactive({
         clonality_data() %>%
-            select(repertoire_id, clonality, gini_coefficient, top_productive_sequence) %>%
-            pivot_longer(!repertoire_id,
+            dplyr::select(repertoire_id, clonality, gini_coefficient, top_productive_sequence) %>%
+            tidyr::pivot_longer(!repertoire_id,
                 names_to = "metric",
                 values_to = "values"
             ) %>%
-            group_by(metric) %>%
-            summarize(
+            dplyr::group_by(metric) %>%
+            dplyr::summarize(
                 Mean = mean(values),
                 Minimum = min(values),
                 Maximum = max(values)
             ) %>%
-            drop_na() %>%
-            ungroup() %>%
-            mutate(metric = str_to_title(str_replace_all(metric, "_", " ")))
+            tidyr::drop_na() %>%
+            dplyr::ungroup() %>%
+            dplyr::mutate(metric = str_to_title(str_replace_all(metric, "_", " ")))
     })
 
     output$clonality_stats <- DT::renderDataTable({
@@ -1172,10 +1170,11 @@ server <- function(input, output, session) {
     })
 
     clone_plot_data <- reactive({
-        ggplot(data = clonality_data(), aes(x = repertoire_id, y = clonality)) +
+        ggplot2::ggplot(data = clonality_data(), aes(x = repertoire_id, y = clonality)) +
             geom_bar(stat = "identity", position = position_dodge(), fill = "#b2182b") +
             theme_minimal() +
-            theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), text = element_text(size = 10)) +
+            theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+                  text = element_text(size = 10)) +
             scale_x_discrete(limits = clonality_data()$repertoire_id) +
             labs(x = "", y = "Clonality")
     })
@@ -1257,7 +1256,7 @@ server <- function(input, output, session) {
     public_table_data <- reactive({
         published <- LymphoSeq2::searchPublished(productive_aa())
         published %>%
-            filter(!is.na(PMID))
+            dplyr::filter(!is.na(PMID))
     })
 
     output$public_tcrb <- DT::renderDataTable({
@@ -1286,11 +1285,11 @@ server <- function(input, output, session) {
     output$gene_freq_heat <- renderPlotly({
         heatmaply::heatmaply(gene_heatmap_data(), scale = "row", fontsize_row = 6)
     }) %>%
-        bindCache(gene_heatmap_data())
+        shiny::bindCache(gene_heatmap_data())
 
     gene_bar_data <- reactive({
         genes <- LymphoSeq2::geneFreq(productive_nt(), input$locus, input$family_bool)
-        ggplot(genes, aes(x = repertoire_id, y = gene_frequency, fill = gene_name)) +
+        ggplot2::ggplot(genes, aes(x = repertoire_id, y = gene_frequency, fill = gene_name)) +
             geom_bar(stat = "identity") +
             theme_minimal() +
             scale_y_continuous(expand = c(0, 0)) +
@@ -1302,7 +1301,7 @@ server <- function(input, output, session) {
     output$gene_freq_bar <- renderPlotly({
         plotly::ggplotly(gene_bar_data())
     }) %>%
-        bindCache(gene_bar_data())
+        shiny::bindCache(gene_bar_data())
 
     observeEvent(input$word_button, {
         shinyjs::show("gene_freq_word")
@@ -1311,7 +1310,7 @@ server <- function(input, output, session) {
     gene_word_data <- reactive({
         genes <- LymphoSeq2::geneFreq(productive_nt(), input$locus, input$family_bool)
         gene_data <- genes %>%
-            filter(repertoire_id == input$word_id)
+            dplyr::filter(repertoire_id == input$word_id)
         gene_data <- data.frame(gene_data$gene_name, gene_data$gene_frequency)
         wordcloud2::wordcloud2(gene_data, color = "random-dark", minSize = 10)
     })
@@ -1322,8 +1321,8 @@ server <- function(input, output, session) {
             gene_word_data()
         })
     }) %>%
-        bindCache(gene_word_data()) %>%
-        bindEvent(input$word_button)
+        shiny::bindCache(gene_word_data()) %>%
+        shiny::bindEvent(input$word_button)
 
     gene_table_data <- reactive({
         LymphoSeq2::geneFreq(productive_nt(), input$locus, input$family_bool)
@@ -1383,8 +1382,8 @@ server <- function(input, output, session) {
         shiny::updateRadioButtons(session, "separate_by_rep", selected = "yes")
         LymphoSeq2::kmerPlot(kmer_table_data(), input$k_top)
     }) %>%
-        bindCache(kmer_table_data()) %>%
-        bindEvent(input$kmer_distrib_button)
+        shiny::bindCache(kmer_table_data()) %>%
+        shiny::bindEvent(input$kmer_distrib_button)
 
     # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
