@@ -8,27 +8,9 @@ All of the required packages will be automtically installed when the application
 
 ### Installing LymphoSeq2
 
-The LymphoSeq2 Shiny application is currently using a developmental version of LymphoSeq2, which will need to be downloaded from the [source code](https://github.com/WarrenLabFH/LymphoSeq2).
-
-1. Get a copy of LymphoSeq2 by running the following command in the terminal (in whatever directory you want this in):
-   
-   ```
-   git clone https://github.com/WarrenLabFH/LymphoSeq2.git
-   ```
-   
-2. As of June 2022, the branch v1 has the latest updates, and so this is the version of LymphoSeq2 we will be interested in installing. Run the following commands to get to v1: 
+LymphoSeq2 can be installed from an R session by running the commands below:
 
    ```
-   cd LymphoSeq2
-   
-   git checkout v1
-   ```
-
-3. After we are in the v1 branch, we can open an R session in the LymphoSeq2 directory and download LymphoSeq2 as package with the following commands:
-
-   ```
-   radian
-   
    # install the devtools package first (skip if already installed)
    install.packages("devtools")
    
@@ -36,7 +18,7 @@ The LymphoSeq2 Shiny application is currently using a developmental version of L
    library(devtools)
 
    # install LymphoSeq2
-   install()
+   devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
    ```
 
 ## Running the Application
