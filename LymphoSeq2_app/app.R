@@ -448,6 +448,7 @@ alluvial_tooltip <- function(plot_hover) {
 # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
 server <- function(input, output, session) {
+
     shinyjs::disable("top_num")
     shinyjs::disable("track_aa")
     shinyjs::disable("top_chord_num")
