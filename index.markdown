@@ -74,9 +74,9 @@ Some things to note:
 
     LymphoSeq2::readImmunoSeq(path = file_path, recursive = FALSE)
 
-Imports .tsv files exported by the Adaptive Biotechnologies ImmunoSEQ analyzer, MiXCR, and 10x Genomics OR a single RData file with pre-processed summary tables of the aforementioned .tsv files (as output by the Nextflow script available on Github) and output them as a MiAIRR compliant data table.
+Imports .tsv files exported by the Adaptive Biotechnologies ImmunoSEQ analyzer, MiXCR, and 10x Genomics OR a single RData file with pre-processed summary tables of the aforementioned .tsv files (as output by the Nextflow script available on Github) and output them as an [Adaptive Immune Receptor Repertoire (AIRR)](https://docs.airr-community.org/en/latest/index.html) compliant data table.
 
-User will need to upload files.
+User will need to upload the appropriate files.
 
 ### Explore Repertoire Overlap
 
