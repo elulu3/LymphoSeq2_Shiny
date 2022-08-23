@@ -4,21 +4,29 @@ title: LymphoSeq2 Shiny
 filename: 
 ---
 
-# Providing Inputs to the Application
+# Uploading files to the Application
 
-The application will accept inputs in various formats:
+The application will accept inputs in the following formats:
 
 1. TSV files from Adaptive Biotechnologies and 10x Genomics
 
-2. A single RData file that can be retrieved from the following two processes: 
+2. A single RData file that was retrieved from the following two processes: 
 
-    - The RData file is a result of the the files above in (1) processed through the Nextflow script. This Nextflow script will run the dataset through LymphoSeq2 functions and output the following tables into a single file:
+    - The RData file was a result of the the files above in (1) processed through the Nextflow script [Link will be provided]. This Nextflow script runs the dataset through LymphoSeq2 functions and outputs the following tables into its own file and into a single file (that stores a single R object):
         - Standardized AIRR table
         - Productive amino acid sequences table
         - Productive nucleotide sequences table
         - Summary statistics table
 
-    - The RData file is downloaded from the Shiny application itself
+    - The RData file was downloaded from the Shiny application itself
+
+**Size Limitations** 
+
+There are currently some limitations on how much data can be uploaded and processed. The current upper limit is around **5GB**. If the uploaded files exceeds this limit, the application will not load. However, there are some workarounds.
+
+If the raw data exceeds 5GB, the data can be processed through the Nextflow script to be condensed and compressed, resulting in a smaller file size. Another alternative is to manually filter the raw data beforehand to analyze a more specific subset of the data. 
+
+When uploading data with an RData file, it is possible that instead of uploading the single RData file with all of the summary tables of the dataset, one can upload a specific summary table that is used by a specific function for its analysis. Most of the functions only relies on one of the summary tables produced, so if a user knows what analysis they want to perform, it is more efficient to upload smaller portions of data in this way. 
 
 # Outputs
 
