@@ -6,9 +6,15 @@ filename: development
 
 # Local Installation
 
-To install a local copy of this application, instructions are available on [Github](https://github.com/elulu3/LymphoSeq2_Shiny). 
+To install a local copy of this application, instructions are available on [Github](https://github.com/elulu3/LymphoSeq2_Shiny).
 
-Maximum data file upload size are adjustable in the local installation.
+# Known Bugs
+
+# Reporting Bugs
+
+Any bugs or issues discovered can be reported on the [Github issues page](https://github.com/elulu3/LymphoSeq2_Shiny/issues).
+
+Once on the [Issues](https://github.com/elulu3/LymphoSeq2_Shiny/issues) page, click on [New Issue](https://github.com/elulu3/LymphoSeq2_Shiny/issues/new). In the [Title] section, write a brief description of the bug. In the [Write] section, describe the expected or intended interaction/output and what actually happened instead. Please also attach a screenshot of the error in the same section. 
 
 # Further Development
 
