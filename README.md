@@ -4,22 +4,7 @@ LymphoSeq2_Shiny is an interactive web application of [LymphoSeq2](https://githu
 
 ## Dependencies
 
-All of the required packages will be automtically installed when the application is run. However, the user will need to manually install **LymphoSeq2**. Instructions are below.
-
-### Installing LymphoSeq2
-
-LymphoSeq2 can be installed from an R session by running the commands below:
-
-   ```
-   # install the devtools package first (skip if already installed)
-   install.packages("devtools")
-   
-   # load devtools package
-   library(devtools)
-
-   # install LymphoSeq2
-   devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
-   ```
+All of the required packages will be automtically installed when the application is run.
 
 ## Running the Application Locally (from source)
 
