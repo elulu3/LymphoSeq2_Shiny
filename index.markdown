@@ -149,7 +149,7 @@ If uploading RData file: **amino_table.rda**
 
 #### 1. Top Productive Sequences Table
 
-    LymphoSeq2::topSeqs(productive_aa, top = 1)
+    LymphoSeq2::topSeqs(productive_aa, top = [NUM])
 
 Outputs a datatable of a selected number of top productive sequences.
 
@@ -159,7 +159,7 @@ If uploading RData file: **amino_table.rda**
 
 #### 2. Top Productive Sequences Plot
 
-    LymphoSeq2::topSeqsPlot(productive_aa, top = 10)
+    LymphoSeq2::topSeqsPlot(productive_aa, top = [NUM])
 
 Outputs a cumulative frequency bar plot of a sepcified number of top sequences.
 
@@ -183,7 +183,7 @@ If uploading RData file: **amino_table.rda**
 
 #### 1. Data Table
 
-    LymphoSeq2::geneFreq(productive_nt, locus = "V|D|J", family = FALSE)
+    LymphoSeq2::geneFreq(productive_nt, locus = [VDJ_STR], family = [BOOL])
 
 Outputs a data table of VDJ gene counts and frequencies.
 
@@ -212,7 +212,7 @@ If uploading RData file: **nucleotide_table.rda**
 #### 1. Clonality
 
     LymphoSeq2::clonality(study_table)
-    LymphoSeq2::clonalRelatedness(study_table, editDistance = 10)
+    LymphoSeq2::clonalRelatedness(study_table, editDistance = [NUM])
 
 Outputs a datatable giving the total number of sequences, number of unique productive sequences, number of genomes, clonality, Gini coefficient, and the frequency (\%) of the top productive sequence, simpson index, inverse simpson index, hill diversity index, chao diversity index, and kemp diversity index for each repertoire_id. Optionally, will also calculate the clonal relatedness for each repertoire_id. 
 
@@ -230,7 +230,7 @@ If uploading RData file: **study_table.rda**
 
 #### 1. K-mer Counts
 
-    LymphoSeq2::countKmer(study_table, k = 5, separate = TRUE)
+    LymphoSeq2::countKmer(study_table, k = [NUM], separate = [BOOL])
 
 Calculate the counts of k-mers in the nucleotide sequences output as a table.
 
@@ -242,7 +242,7 @@ If uploading RData file: **study_table.rda**
 
 #### 2. K-mer Distribution
 
-    LymphoSeq2::kmerPlot(countKmer_table, top = 10)
+    LymphoSeq2::kmerPlot(countKmer_table, top = [NUM])
 
 Plot top k-mer distributions by repertoire id. The input is the output of `countKmer` where `separate=TRUE`. The output of this function is a stacked bar chart.
 
@@ -252,7 +252,7 @@ If uploading RData file: **study_table.rda**
 
 ### Chord Diagram VDJ
 
-    LymphoSeq2::chordDiagramVDJ(productive_nt, association = "VJ", colors = c("red", "blue")
+    LymphoSeq2::chordDiagramVDJ(productive_nt, association = [VDJ_STR], colors = c("red", "blue"))
 
 Outputs a chord diagram showing VJ or DJ gene association.
 
@@ -296,7 +296,7 @@ If uploading RData file: **amino_table.rda**
 
 ### Differential Abundance
 
-    LymphoSeq2::differentialAbundance(productive_aa, repertoire_ids, abundance = "duplicate_count", type = "junction_a", q = 1, zero = 1, parallel = FALSE)
+    LymphoSeq2::differentialAbundance(productive_aa, repertoire_ids, abundance = "duplicate_count", type = "junction_aa", q = [NUM], zero = [NUM], parallel = FALSE)
 
 Outputs a datatable of the log2 transformed fold change, P value, and adjusted P value of using a Fisher exact test to calculate differential abdunance of each sequence in 
 two samples.
