@@ -22,9 +22,9 @@ The application will accept inputs in the following formats:
 
 **Upload Size Limitations** 
 
-There are currently some limitations on how much data can be uploaded and processed. The current upper limit is around **5GB**. If the uploaded files exceeds this limit, the application will not load. However, there are some workarounds.
+There are currently some limitations on how much data can be uploaded and processed. This application uses R and as data is read in, R loads it into memory, meaning that the upper limit will depend on how much memory is available in the device. In short, the upper limit depends on the device that the user runs the application on, specifically its memory capacity. If the uploaded files exceeds this limit, the outputs will not load. However, there are some possible workarounds.
 
-If the raw data exceeds 5GB, the data can be processed through the Nextflow script to be condensed and compressed, resulting in a smaller file size. Another alternative is to manually filter the raw data beforehand to analyze a more specific subset of the data. 
+If the raw data exceeds the limit, the data can be processed through the Nextflow script to be condensed and compressed, resulting in a smaller file size. Another alternative is to manually filter the raw data beforehand to analyze a more specific subset of the data. 
 
 When uploading data with an RData file, it is possible that instead of uploading the single RData file with all of the summary tables of the dataset, one can upload the specific summary table that is used by a specific function for its analysis. Most of the functions only relies on one of the summary tables produced, so if a user knows what analyses they want to perform, it can be more efficient to upload smaller portions of data in this way. 
 
