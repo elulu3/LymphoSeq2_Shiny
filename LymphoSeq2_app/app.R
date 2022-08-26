@@ -12,12 +12,15 @@ if (!require("ggalluvial", character.only = TRUE)) {
 if (!require("chorddiag", character.only = TRUE)) {
     devtools::install_github("mattflor/chorddiag", build_vignettes = FALSE)
 }
+if (!require("LymphoSeq2", character.only = TRUE)) {
+    devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
+}
 library(LymphoSeq2)
 
 # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
 # max upload size (current: 1 GB)
-options(shiny.maxRequestSize = 1000 * 1024^2)
+options(shiny.maxRequestSize = 2000 * 1024^2)
 
 
 ui <-
