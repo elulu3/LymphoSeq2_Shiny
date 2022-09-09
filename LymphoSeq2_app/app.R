@@ -283,6 +283,20 @@ ui <-
                                     id = "kmer_sub_tab"
                                 )
                             ),
+                            tabPanel("Explore Public Databases",
+                                value = "public_db_panel",
+                                tabsetPanel(
+                                    tabPanel("Search LymphoSeqDB",
+                                        value = "search_lymphoseqdb",
+                                        DT::dataTableOutput("lymphoseqdb_match") %>% withSpinner()
+                                    ),
+                                    tabPanel("Search iReceptor",
+                                        value = "search_ireceptor",
+                                        DT::dataTableOutput("ireceptor_match") %>% withSpinner()
+                                    ),
+                                    id = "public_db_sub_tab"
+                                )
+                            ),
                             tabPanel("Chord Diagram VDJ",
                                 value = "chord_diagram",
                                 chorddiagOutput("chord_diagram", width = "100%", height = "600px") %>% withSpinner()
@@ -303,13 +317,17 @@ ui <-
                                 ) %>% withSpinner(),
                                 htmlOutput("clone_track_tooltip")
                             )),
-                            tabPanel("Public TCRB Sequences",
-                                value = "public_tcrb_seq",
-                                DT::dataTableOutput("public_tcrb") %>% withSpinner()
-                            ),
+                            # tabPanel("Public TCRB Sequences",
+                            #     value = "public_tcrb_seq",
+                            #     DT::dataTableOutput("public_tcrb") %>% withSpinner()
+                            # ),
                             tabPanel("Differential Abundance",
                                 value = "diff_abundance",
                                 DT::dataTableOutput("diff_abundance") %>% withSpinner()
+                            ),
+                            tabPanel("Multiple Sequence Alignment",
+                                value = "seq_align",
+                                plotlyOutput("seq_align_plot") %>% withSpinner()
                             ),
                             id = "tabselected"
                         )
@@ -1257,14 +1275,26 @@ server <- function(input, output, session) {
         alluvial_tooltip(input$clone_track_hover)
     )
 
-    public_table_data <- reactive({
+    lymphoseqdb_data <- reactive({
         published <- LymphoSeq2::searchPublished(productive_aa())
         published %>%
             dplyr::filter(!is.na(PMID))
     })
 
-    output$public_tcrb <- DT::renderDataTable({
-        public_table_data() %>%
+    output$lymphoseqdb_match <- DT::renderDataTable({
+        lymphoseqdb_data() %>%
+            DT::datatable(filter = "top", options = list(scrollX = TRUE))
+    })
+
+    ireceptor_data <- reactive({
+        # top_seqs <- topSeqs(productive_table = productive_aa(), top = 1)
+        print(airr_data()$sequence_aa)
+        print(productive_aa())
+        LymphoSeq2::searchDB(top_seqs)
+    })
+
+    output$ireceptor_match <- DT::renderDataTable({
+        ireceptor_data() %>%
             DT::datatable(filter = "top", options = list(scrollX = TRUE))
     })
 
@@ -1453,7 +1483,7 @@ server <- function(input, output, session) {
                     data_output <- LymphoSeq2::kmerPlot(kmer_table_data(), input$k_top)
                 }
             } else if (input$tabselected == "public_tcrb_seq") {
-                data_output <- public_table_data()
+                data_output <- lymphoseqdb_data()
             } else if (input$tabselected == "diff_abundance") {
                 data_output <- diff_table_data()
             } else if (input$tabselected == "rarefaction_curve") {
