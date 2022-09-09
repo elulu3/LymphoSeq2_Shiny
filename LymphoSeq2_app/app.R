@@ -1007,7 +1007,7 @@ server <- function(input, output, session) {
 
     stats_count_data <- reactive({
         clonality_data() %>%
-            splyr::select(
+            dplyr::select(
                 repertoire_id, total_sequences,
                 unique_productive_sequences, total_count
             ) %>%
@@ -1224,11 +1224,11 @@ server <- function(input, output, session) {
             )
             aa_list <- input$track_aa
         }
-        ctable <- LymphoSeq2::cloneTrack(productive_aa(), alist <- aa_list,
-                                         sample_list = input$track_id)
+        ctable <- LymphoSeq2::cloneTrack(clone_track_table,
+                                         sample_list = input$track_id,
+                                         sequence_track = aa_list)
         ctable <- dplyr::left_join(data.frame(repertoire_id = input$track_id),
-                                   ctable, by = "repertoire_id"
-        )
+                                   ctable, by = "repertoire_id")
         LymphoSeq2::plotTrack(clone_table = ctable)
     })
 
