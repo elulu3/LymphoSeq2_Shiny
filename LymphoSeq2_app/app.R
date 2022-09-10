@@ -158,6 +158,22 @@ ui <-
                             numericInput("k_top", "Number of top kmers", value = 10),
                             actionButton("kmer_distrib_button", "Plot Distribution")
                         ),
+                        conditionalPanel(
+                            condition = "input.tabselected == 'seq_align'",
+                            selectizeInput("align_rep",
+                                label = "Select repertoire ids (Optional):",
+                                choices = c(""), multiple = TRUE
+                            ),
+                            radioButtons("type", "Select type of sequences to align",
+                                choices = c("junction", "junction_aa"), inline = TRUE),
+                            selectizeInput("align_seq",
+                                label = "Select sequences (Optional):",
+                                choices = c(""), multiple = TRUE
+                            ),
+                            radioButtons("method", "Select multiple sequence alignment method",
+                                choices = c("ClustalW", "ClustalOmega", "Muscle")),
+                            actionButton("align_button", "Plot Alignment")
+                        ),
                         tags$br(),
                         fluidRow(
                             style = "border: 1px solid #d3d3d3; border-radius: 5px;",
@@ -315,8 +331,8 @@ ui <-
                                     height = "600px",
                                     hover = hoverOpts(id = "clone_track_hover")
                                 ) %>% withSpinner(),
-                                htmlOutput("clone_track_tooltip")
-                            )),
+                                htmlOutput("clone_track_tooltip"))
+                            ),
                             # tabPanel("Public TCRB Sequences",
                             #     value = "public_tcrb_seq",
                             #     DT::dataTableOutput("public_tcrb") %>% withSpinner()
@@ -327,7 +343,7 @@ ui <-
                             ),
                             tabPanel("Multiple Sequence Alignment",
                                 value = "seq_align",
-                                plotlyOutput("seq_align_plot") %>% withSpinner()
+                                plotOutput("seq_align_plot") %>% withSpinner()
                             ),
                             id = "tabselected"
                         )
@@ -607,8 +623,7 @@ server <- function(input, output, session) {
 
     # Update download choices appropriately when tabs are clicked
     observeEvent(input$tabselected, {
-        if (input$tabselected %in% c("airr_table", "count_stats",
-                         "public_tcrb_seq", "diff_abundance") ||
+        if (input$tabselected %in% c("airr_table", "count_stats", "diff_abundance") || #"public_tcrb_seq",
                 input$tabselected == "common_panel" && input$common_sub_tab == "common_seq_table" ||
                 input$tabselected == "prod_seq_panel" && (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") ||
                 input$tabselected == "clonality_panel" && input$clonal_sub_tab != "clonality_plot" ||
@@ -1287,9 +1302,8 @@ server <- function(input, output, session) {
     })
 
     ireceptor_data <- reactive({
-        # top_seqs <- topSeqs(productive_table = productive_aa(), top = 1)
-        print(airr_data()$sequence_aa)
-        print(productive_aa())
+        # EDIT!!!
+        top_seqs <- LymphoSeq2::topSeqs(productive_table = productive_aa(), top = 1)
         LymphoSeq2::searchDB(top_seqs)
     })
 
@@ -1419,6 +1433,11 @@ server <- function(input, output, session) {
         shiny::bindCache(kmer_table_data()) %>%
         shiny::bindEvent(input$kmer_distrib_button)
 
+    output$seq_align_plot <- renderPlot({
+        msa <- LymphoSeq2::alignSeq(productive_nt(), repertoire_id = "IGH_MVQ92552A_BL", type = "junction", method = "ClustalW")
+        LymphoSeq2::plotAlignment(msa)
+    })
+
     # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
     output$download <- downloadHandler(
@@ -1482,8 +1501,12 @@ server <- function(input, output, session) {
                 } else if (input$kmer_sub_tab == "kmer_distrib") {
                     data_output <- LymphoSeq2::kmerPlot(kmer_table_data(), input$k_top)
                 }
-            } else if (input$tabselected == "public_tcrb_seq") {
-                data_output <- lymphoseqdb_data()
+            } else if (input$tabselected == "public_db_panel") {
+                if(input$public_db_sub_tab == "search_lymphoseqdb") {
+                    data_output <- lymphoseqdb_data()
+                } else if (input$public_db_sub_tab == "search_ireceptor") {
+                    data_output <- ireceptor_data()
+                }
             } else if (input$tabselected == "diff_abundance") {
                 data_output <- diff_table_data()
             } else if (input$tabselected == "rarefaction_curve") {
