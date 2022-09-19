@@ -258,8 +258,8 @@ ui <-
                                         value = "gene_freq_bar",
                                         plotlyOutput("gene_freq_bar", height = "600px") %>% withSpinner()
                                     ),
-                                    # tabPanel("Word Cloud", value = "gene_freq_word",
-                                    #     wordcloud2Output("gene_freq_word") %>% withSpinner()),
+                                    tabPanel("Word Cloud", value = "gene_freq_word",
+                                        wordcloud2Output("gene_freq_word") %>% withSpinner()),
                                     id = "gene_sub_tab"
                                 )
                             ),
@@ -482,6 +482,9 @@ alluvial_tooltip <- function(plot_hover) {
     }
 }
 
+# Color blind friendly palette
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
 server <- function(input, output, session) {
@@ -514,7 +517,7 @@ server <- function(input, output, session) {
                 } else if (tools::file_ext(input$airr_files$name) == "rda") {
                     rda_envir <<- new.env()
                     name <- load(input$airr_files$datapath, envir = rda_envir)
-                    rda_envir$nucleotide_table
+                    rda_envir$amino_table
                 }
             },
             error = function(e) {
@@ -755,6 +758,7 @@ server <- function(input, output, session) {
         } else {
             chord_table <- productive_nt()
         }
+        chord_table <- as.data.frame(apply(chord_table, 2, function(x) gsub("TCRB", "", x)))
         if (input$vdj_association == "VJ") {
             vj <- chord_table %>%
                 dplyr::select(v_family, j_family) %>%
@@ -806,6 +810,7 @@ server <- function(input, output, session) {
             chorddiag::chorddiag(chord_data(),
                 type = "bipartite",
                 showTicks = FALSE,
+                groupColors = cbPalette,
                 groupnameFontsize = 15,
                 groupnamePadding = 10, margin = 90
             )
@@ -828,7 +833,6 @@ server <- function(input, output, session) {
         if (!is.null(input$color_intersect) & "none" %in% input$color_intersect) {
             color_intersect <- NULL
         }
-        print(c(color_intersect))
         LymphoSeq2::commonSeqsBar(productive_aa(),
             input$bar_id, color_rep_id, c(color_intersect),
             labels = "yes"
@@ -1260,9 +1264,9 @@ server <- function(input, output, session) {
         ctable <- LymphoSeq2::cloneTrack(clone_track_table,
                                          sample_list = input$track_id,
                                          sequence_track = aa_list)
-        ctable <- dplyr::left_join(data.frame(repertoire_id = input$track_id),
-                                   ctable, by = "repertoire_id")
         LymphoSeq2::plotTrack(clone_table = ctable)
+            # + geom_label(stat = "stratum", aes(label = after_stat(stratum))) +
+            # + theme(legend.position = "bottom")
     })
 
     output$clone_track <- renderPlot({
@@ -1281,8 +1285,6 @@ server <- function(input, output, session) {
                                             or increase number of top clones to plot.",
                                         type = "error")
             })
-            # + geom_label(stat = "stratum", aes(label = after_stat(stratum))) +
-            # theme(legend.position = "right")
         })
     })
 
@@ -1456,7 +1458,14 @@ server <- function(input, output, session) {
                     data_output <- gene_table_data()
                 }
             } else if (input$tabselected == "chord_diagram") {
-                data_output <- circlize::chordDiagram(chord_data(), annotationTrack = c("grid", "name"))
+                # data_output <- circlize::chordDiagram(chord_data(), annotationTrack = c("grid", "name"))
+                data_output <- chorddiag::chorddiag(chord_data(),
+                                                    type = "bipartite",
+                                                    showTicks = FALSE,
+                                                    groupColors = cbPalette,
+                                                    groupnameFontsize = 15,
+                                                    groupnamePadding = 10, margin = 90
+                                                )
             } else if (input$tabselected == "common_panel") {
                 if (input$common_sub_tab == "pairwise_sim") {
                     data_output <- pairwise_sim_data()
@@ -1530,7 +1539,17 @@ server <- function(input, output, session) {
                 if (input$tabselected == "gene_panel" || input$tabselected == "kmer_panel") {
                     print(data_output)
                 } else if (input$tabselected == "chord_diagram") {
-                    data_output <- circlize::chordDiagram(chord_data(), annotationTrack = c("grid", "name"))
+                    # data_output <- circlize::chordDiagram(chord_data(), annotationTrack = c("grid", "name"))
+                    data_output <- chorddiag::chorddiag(chord_data(),
+                                                        type = "bipartite",
+                                                        showTicks = FALSE,
+                                                        groupColors = cbPalette,
+                                                        groupnameFontsize = 15,
+                                                        groupnamePadding = 10, margin = 90
+                                                    )
+                    htmlwidgets::saveWidget(data_output, "temp.html")
+                    webshot::webshot(url = "temp.html", file = "chord_diagram.png")
+                    # file.copy("chord_diagram.pdf", file)
                 } else if (input$tabselected == "common_panel") {
                     if (input$common_sub_tab == "common_bar") {
                         print(data_output)
