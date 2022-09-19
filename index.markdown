@@ -22,11 +22,11 @@ The application will accept inputs in the following formats:
 
 **Upload Size Limitations** 
 
-There are currently some limitations on how much data can be uploaded and processed. This application uses R and as data is read in, R loads it into memory, meaning that the upper limit will depend on how much memory is available in the device. In short, the upper limit depends on the device that the user runs the application on, specifically its memory capacity. If the uploaded files exceeds this limit, the outputs will not load. However, there are some possible workarounds.
+There are currently some limitations on how much data can be uploaded and processed. This application uses R and as data is read in, R loads it into memory. This means that in a local deployment of the application, the upper data limit will depend on how much memory is available on the device. If the uploaded files exceeds this limit, the outputs will not load. However, there are some possible workarounds.
 
 If the raw data exceeds the limit, the data can be processed through the Nextflow script to be condensed and compressed, resulting in a smaller file size. Another alternative is to manually filter the raw data beforehand to analyze a more specific subset of the data. 
 
-When uploading data with an RData file, it is possible that instead of uploading the single RData file with all of the summary tables of the dataset, one can upload the specific summary table that is used by a specific function for its analysis. Most of the functions only relies on one of the summary tables produced, so if a user knows what analyses they want to perform, it can be more efficient to upload smaller portions of data in this way. 
+In addition, when uploading data with an RData file, it is possible that instead of uploading the single RData file with all of the summary tables of the dataset, one can upload a single summary table instead. Most of the functions only relies on one of the summary tables produced, so if a user knows what analyses they want to perform, it can be more efficient to upload smaller portions of data in this way. 
 
 # Outputs
 
@@ -82,7 +82,7 @@ Imports .tsv files exported by the Adaptive Biotechnologies ImmunoSEQ analyzer, 
 
 User will need to upload appropriate files.
 
-If uploading RData file: **study_table.rda**
+If uploading RData file: **all .rda files accepted**
 
 ### Explore Repertoire Overlap
 
@@ -155,7 +155,7 @@ Outputs a datatable of a selected number of top productive sequences.
 
 Users will need to select the number of top productive sequences to subset by their frequencies.
 
-If uploading RData file: **amino_table.rda**
+If uploading RData file: **amino_table.rda, nucleotide_table.rda**
 
 #### 2. Top Productive Sequences Plot
 
@@ -167,7 +167,7 @@ Users will need to select the number of top sequences ot be colored in the bar p
 
 All other, less frequent sequences are colored violet.
 
-If uploading RData file: **amino_table.rda**
+If uploading RData file: **all except for summary_table.rda**
 
 #### 3. Unique Productive Sequences Plot
 
@@ -230,7 +230,7 @@ If uploading RData file: **study_table.rda**
 
 #### 1. K-mer Counts
 
-    LymphoSeq2::countKmer(study_table, k = [NUM], separate = [BOOL])
+    LymphoSeq2::countKmer(productive_nucleotide, k = [NUM], separate = [BOOL])
 
 Calculate the counts of k-mers in the nucleotide sequences output as a table.
 
@@ -238,7 +238,7 @@ If `separate = TRUE`, the counts will be separated by repertoire-ids, if `separa
 
 Users will need to choose the k-mer length and if they would like to display the results separated by repertoire-ids.
 
-If uploading RData file: **study_table.rda**
+If uploading RData file: **nucleotide_table.rda**
 
 #### 2. K-mer Distribution
 
@@ -248,7 +248,25 @@ Plot top k-mer distributions by repertoire id. The input is the output of `count
 
 Users will need to choose the k-mer length and how many most frequent k-mers to visualize.
 
-If uploading RData file: **study_table.rda**
+If uploading RData file: **nucleotide_table.rda**
+
+### Explore Public Databases
+
+#### 1. Search LymphoSeqDB
+
+    LymphoSeq2::searchPublished(productive_aa)
+
+This function searches for published T cell receptor beta CDR3 amino acid sequences with known antigen specificity in a list of data frames. The output is a datatable. The database being searched is the publishedTRB database in the LymphoSeqDB package.
+
+If uploading RData file: **all except for summary_table.rda**
+
+#### 2. Search iReceptor
+
+    LymphoSeq2::searchDB()
+
+This function searches for published T cell receptor beta CDR3 amino acid sequences with known antigen specificity in a list of data frames. The output is a datatable. The database being searched is the iReceptor database.
+
+If uploading RData file: **all except for summary_table.rda**
 
 ### Chord Diagram VDJ
 
@@ -256,7 +274,7 @@ If uploading RData file: **study_table.rda**
 
 Outputs a chord diagram showing VJ or DJ gene association.
 
-User will need to choose a VDJ association (VJ or DJ) and whether to plot a certain number of top sequences (which the user specifies if yes) or plot all sequences.
+User will need to choose a VDJ association (VJ or DJ) and whether to plot a certain number of top sequences or plot all sequences. Plotting top sequences is recommended.
 
 If uploading RData file: **nucleotide_table.rda**
 
@@ -274,7 +292,7 @@ If uploading RData file: **study_table.rda**
 
 Outputs a Lorenz curve derived from the frequency of the amino acid sequences.
 
-If uploading RData file: **amino_table.rda**
+If uploading RData file: **all except for summary_table.rda**
 
 ### Clone Tracking
     clone_table <- LymphoSeq2::clone_tack(productive_aa, sample_list)
@@ -283,14 +301,6 @@ If uploading RData file: **amino_table.rda**
 Outputs an alluvial plot tracking amino acid frequencies across multiple samples.
 
 User will need to select repertoire_ids to visualize. Users will also have to make the selection to track all clones or to track the top number of clones, in which the user provides the number of clones to track. The default for this choice is tracking the top 50 clones. Users can also choose to track specific amino acid sequences. 
-
-If uploading RData file: **amino_table.rda**
-
-### Public TCRB Sequences
-
-    LymphoSeq2::searchPublished(productive_aa)
-
-Ths function searches for published T cell receptor beta CDR3 amino acid sequences with known antigen specificity in a list of data frames. The output is a datatable.
 
 If uploading RData file: **amino_table.rda**
 
@@ -303,4 +313,4 @@ two samples.
 
 Users will need to select two repertoire ids to analyze and the `q` and `zero` values for calculation. The `q` value is a numeric value between 0.0 and 1.0 indicating the threshold Holms adjusted P value (also knowns as the false discovery rate or q value) to subset the results with. Any sequences with a `q` value greater than this value will not be shown. The `zero` value is a numeric value to set all zero values to when calculating the log2 transformed fold change between samples 1 and 2.
 
-If uploading RData file: **amino_table.rda**
+If uploading RData file: **all except for summary_table.rda**
