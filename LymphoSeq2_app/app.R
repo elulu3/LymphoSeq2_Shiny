@@ -203,8 +203,8 @@ ui <-
                                 value = "common_panel",
                                 tabsetPanel(
                                     tabPanel("Data Table",
-                                        value = "common_seq_table",
-                                        DT::dataTableOutput("common_seq_table") %>% withSpinner()
+                                        value = "common_seqs_table",
+                                        DT::dataTableOutput("common_seqs_table") %>% withSpinner()
                                     ),
                                     tabPanel("Bar Chart",
                                         value = "common_bar",
@@ -502,13 +502,11 @@ server <- function(input, output, session) {
     # Standardizes input files into AIRR-compliant format
     airr_data <- reactive({
         validate(
-            need(
-                !is.null(input$airr_files),
-                "Please select files to upload to render output."
-            )
+            need(!is.null(input$airr_files),
+                "Please select files to upload to render output.")
         )
         tryCatch({
-                if (tools::file_ext(input$airr_files$name) == "tsv") {
+                if (tools::file_ext(input$airr_files$name[[1]]) == "tsv") {
                     rda_envir <<- NULL
                     table <- LymphoSeq2::readImmunoSeq(input$airr_files$datapath)
                     in_files <- lapply(c(input$airr_files$name), function(i) substr(i, 1, stringr::str_length(i) - 4))
@@ -518,27 +516,35 @@ server <- function(input, output, session) {
                             in_files[as.integer(repertoire_id) + 1], "unknown"
                         ))
                     table
-                } else if (tools::file_ext(input$airr_files$name) == "rda") {
+                } else if (tools::file_ext(input$airr_files$name[[1]]) == "rda") {
                     rda_envir <<- new.env()
                     name <- load(input$airr_files$datapath, envir = rda_envir)
-                    rda_envir$amino_table
+                    rda_envir$study_table
                 }
             },
             error = function(e) {
                 shinyalert::shinyalert("Cannot read data format.",
                                        "Please upload other files.",
-                                       type = "error"
-                )
-                return()
+                                       type = "error")
             }
         )
     })
 
     # Filters for productive amino acid sequences
     productive_aa <- reactive({
-        if (is.null(rda_envir)) {
+        validate(
+            need(
+                !is.null(input$airr_files),
+                "Please select files to upload to render output."
+            )
+        )
+        if (tools::file_ext(input$airr_files$name) == "tsv") {
             LymphoSeq2::productiveSeq(study_table = airr_data(),
                                       aggregate = "junction_aa")
+        } else if (input$airr_files$name == "amino_table.rda") {
+            rda_envir <<- new.env()
+            name <- load(input$airr_files$datapath, envir = rda_envir)
+            rda_envir$amino_table
         } else {
             rda_envir$amino_table
         }
@@ -546,18 +552,40 @@ server <- function(input, output, session) {
 
     # Filters for productive nucleotide sequences
     productive_nt <- reactive({
-        if (is.null(rda_envir)) {
+        validate(
+            need(
+                !is.null(input$airr_files),
+                "Please select files to upload to render output."
+            )
+        )
+        if (tools::file_ext(input$airr_files$name) == "tsv") {
             LymphoSeq2::productiveSeq(study_table = airr_data(),
                                       aggregate = "junction")
+        } else if (tools::file_ext(input$airr_files$name) == "rda") {
+            if (input$airr_files$name == "nucleotide_table.rda") {
+                rda_envir <<- new.env()
+                name <- load(input$airr_files$datapath, envir = rda_envir)
+                rda_envir$nucleotide_table
+            } else {
+                rda_envir$nucleotide_table
+            }
         } else {
-            rda_envir$nucleotide_table
+            NULL
         }
     })
 
     # Computes the summary statistics table
     clonality_data <- reactive({
-        if (is.null(rda_envir)) {
+        validate(
+            need(!is.null(input$airr_files),
+                "Please select files to upload to render output.")
+        )
+        if (tools::file_ext(input$airr_files$name) == "tsv") {
             LymphoSeq2::clonality(study_table = airr_data())
+        } else if (input$airr_files$name == "summary_table.rda") {
+            rda_envir <<- new.env()
+            name <- load(input$airr_files$datapath, envir = rda_envir)
+            rda_envir$summary_table
         } else {
             rda_envir$summary_table
         }
@@ -565,10 +593,8 @@ server <- function(input, output, session) {
 
     stable <- reactive({
         validate(
-            need(
-                !is.null(input$airr_files),
-                "Please select files to upload to render output."
-            )
+            need(!is.null(input$airr_files),
+                "Please select files to upload to render output.")
         )
         if (tools::file_ext(input$airr_files$name) == "tsv") {
             if (input$analysis_table == "AIRR") {
@@ -577,6 +603,16 @@ server <- function(input, output, session) {
                 productive_aa()
             } else if (input$analysis_table == "Productive Nucleotide Sequences") {
                 productive_nt()
+            }
+        } else if (tools::file_ext(input$airr_files$name) == "rda") {
+            if(input$airr_files$name == "amino_table.rda") {
+                productive_aa()
+            } else if (input$airr_files$name == "nucleotide_table.rda") {
+                productive_nt()
+            } else if (input$airr_files$name == "summary_table.rda") {
+                clonality_data()
+            } else {
+                airr_data()
             }
         }
     })
@@ -592,6 +628,8 @@ server <- function(input, output, session) {
         unique(productive_aa()[, "repertoire_id"])
     })
 
+    # Grabs list of unique productive amino acid sequences.
+    # Intended to be used for drop down selection.
     unique_prod_aa <- reactive({
         unique_aa <- unique(productive_aa()[, "junction_aa"])
         df <- data.frame(value = unique_aa, label = unique_aa)
@@ -608,7 +646,7 @@ server <- function(input, output, session) {
         } else if (tools::file_ext(input$airr_files$name) == "rda") {
             shinyjs::disable("analysis_table")
         }
-        airr_data()
+        stable()
         if (input$chord_button || input$venn_button || input$bar_button ||
             input$plot_button || input$diff_button || input$track_button ||
             input$clonal_relate_button || input$word_button || input$kmer_button
@@ -654,7 +692,7 @@ server <- function(input, output, session) {
     # Update download choices appropriately when tabs are clicked
     observeEvent(input$tabselected, {
         if (input$tabselected %in% c("airr_table", "count_stats", "diff_abundance") || #"public_tcrb_seq",
-                input$tabselected == "common_panel" && input$common_sub_tab == "common_seq_table" ||
+                input$tabselected == "common_panel" && input$common_sub_tab == "common_seqs_table" ||
                 input$tabselected == "prod_seq_panel" && (input$prod_seq_sub_tab == "top_seq_table" || input$prod_seq_sub_tab == "produtive_seq_table") ||
                 input$tabselected == "clonality_panel" && input$clonal_sub_tab != "clonality_plot" ||
                 input$tabselected == "gene_panel" && input$gene_sub_tab == "gene_freq_table" ||
@@ -674,8 +712,7 @@ server <- function(input, output, session) {
         }
     })
 
-    # Logic for updating repertoire_id selections for
-    # "Explore Repertoire Overlap"
+    # Logic for updating repertoire_id selections for "Explore Repertoire Overlap"
     update_common_tabs <- reactive({
         purrr::map(
             c("common_table_id", "bar_id", "color_intersect", "plot_id", "venn_id"),
@@ -691,7 +728,7 @@ server <- function(input, output, session) {
     #   - download options are updated for each sub tabs
     #   - repertoire_id selections are updated
     observeEvent(input$common_sub_tab, {
-        if (input$common_sub_tab == "common_seq_table") {
+        if (input$common_sub_tab == "common_seqs_table") {
             shiny::updateRadioButtons(session, "download_type",
                                       choices = data_formats)
         } else {
@@ -701,8 +738,7 @@ server <- function(input, output, session) {
         update_common_tabs()
     })
 
-    # Logic for updating repertoire_id selections for
-    # "Explore Gene Frequencies"
+    # Logic for updating repertoire_id selections for "Explore Gene Frequencies"
     update_gene_tabs <- reactive({
         shiny::updateSelectizeInput(session, "word_id",
             choices = unique(productive_nt()[, "repertoire_id"])
@@ -752,6 +788,7 @@ server <- function(input, output, session) {
 
 # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
+    # Shows uploaded data in "AIRR Table" tab
     output$table <- DT::renderDataTable({
         if (input$hide_null) {
             stable() %>%
@@ -767,6 +804,7 @@ server <- function(input, output, session) {
         shinyjs::show("chord_diagram")
     })
 
+    # Disable input selection if user selects "no"
     observeEvent(input$top_seq_chord, {
         if (input$top_seq_chord == "no") {
             shinyjs::disable("top_chord_num")
@@ -775,7 +813,7 @@ server <- function(input, output, session) {
         }
     })
 
-    # Compute data table to create VDJ chord diagram 
+    # Compute data table to create VDJ chord diagram
     chord_data <- reactive({
         if (input$top_seq_chord == "yes") {
             validate(
@@ -846,6 +884,27 @@ server <- function(input, output, session) {
         shiny::bindCache(chord_data()) %>%
         shiny::bindEvent(input$chord_button)
 
+    # Computes data table for common sequences
+    common_table_data <- reactive({
+        if (is.null(productive_aa())) {
+            shinyalert::shinyalert("Incorrect input data.",
+                "Can only perform function on productive amino acid sequences.",
+                type = "error")
+            validate(
+                need(!is.null(productive_aa()),
+                    "Can only perform function on productive amino acid sequences.")
+            )
+            return()
+        }
+        LymphoSeq2::commonSeqs(study_table = productive_aa())
+    })
+
+    # Outputs common sequences data table
+    output$common_seqs_table <- DT::renderDataTable({
+        common_table_data() %>%
+            DT::datatable(filter = "top", options = list(scrollX = TRUE))
+    })
+
     observeEvent(input$bar_button, {
         shinyjs::show("common_seqs_bar")
     })
@@ -872,30 +931,27 @@ server <- function(input, output, session) {
         input$bar_button
         isolate({
             validate(
-                need(
-                    length(input$bar_id) > 1,
-                    "Please select at least 2 repertoire ids"
-                )
+                need(!is.null(productive_aa()),
+                    "Can only perform function on productive amino acid sequences.")
                 %then%
-                    need(
-                        length(input$color_rep_id) == 1,
-                        "Please select only 1 repertoire id"
-                    )
+                    need(length(input$bar_id) > 1,
+                        "Please select at least 2 repertoire ids")
                     %then%
-                    need(
-                        is.null(input$color_intersect) || input$color_intersect == "none" ||
+                        need(length(input$color_rep_id) == 1,
+                            "Please select only 1 repertoire id")
+                        %then%
+                        need(is.null(input$color_intersect) ||
+                                input$color_intersect == "none" ||
                                 length(input$color_intersect) > 1,
-                        "Please select at least 2 repertoire ids"
-                    )
+                            "Please select at least 2 repertoire ids")
             )
             tryCatch({
                 common_bar_data()
             },
-                error = function(e) {
-                    shinyalert::shinyalert("No Common Sequences!",
-                        "Select different repertoire ids.",
-                        type = "error")
-                    return()
+            error = function(e) {
+                shinyalert::shinyalert("No Common Sequences.",
+                    "Select different repertoire ids.",
+                    type = "error")
                 }
             )
         })
@@ -918,10 +974,11 @@ server <- function(input, output, session) {
         input$plot_button
         isolate({
             validate(
-                need(
-                    length(input$plot_id) == 2,
-                    "Please select exactly 2 repertoire ids"
-                )
+                need(!is.null(productive_aa()),
+                    "Can only perform function on productive amino acid sequences.")
+                %then%
+                    need(length(input$plot_id) == 2,
+                        "Please select exactly 2 repertoire ids")
             )
             if (nrow(common_seqs_plot()$data) > 0) {
                 common_seqs_plot()
@@ -950,14 +1007,8 @@ server <- function(input, output, session) {
             venn <- VennDiagram::draw.pairwise.venn(
                 area1 = length(a$junction_aa),
                 area2 = length(b$junction_aa),
-                cross.area = length(intersect(
-                    a$junction_aa,
-                    b$junction_aa
-                )),
-                category = c(
-                    input$venn_id[1],
-                    input$venn_id[2]
-                ),
+                cross.area = length(intersect(a$junction_aa, b$junction_aa)),
+                category = c(input$venn_id[1], input$venn_id[2]),
                 cat.fontfamily = rep("sans", 2),
                 fontfamily = rep("sans", 3),
                 fill = c("#3288bd", "#d53e4f"),
@@ -981,31 +1032,15 @@ server <- function(input, output, session) {
                 area1 = length(a$junction_aa),
                 area2 = length(b$junction_aa),
                 area3 = length(c$junction_aa),
-                n12 = length(intersect(
-                    a$junction_aa,
-                    b$junction_aa
-                )),
-                n23 = length(intersect(
-                    b$junction_aa,
-                    c$junction_aa
-                )),
-                n13 = length(intersect(
-                    a$junction_aa,
-                    c$junction_aa
-                )),
-                n123 = length(Reduce(
-                    intersect,
-                    list(
-                        a$junction_aa,
-                        b$junction_aa,
-                        c$junction_aa
-                    )
-                )),
-                category = c(
-                    input$venn_id[1],
-                    input$venn_id[2],
-                    input$venn_id[3]
-                ),
+                n12 = length(intersect(a$junction_aa, b$junction_aa)),
+                n23 = length(intersect(b$junction_aa,c$junction_aa)),
+                n13 = length(intersect(a$junction_aa,c$junction_aa)),
+                n123 = length(Reduce(intersect,
+                                     list(a$junction_aa,
+                                          b$junction_aa,
+                                          c$junction_aa))),
+                category = c(input$venn_id[1], input$venn_id[2],
+                             input$venn_id[3]),
                 cat.fontfamily = rep("sans", 3),
                 fontfamily = rep("sans", 7),
                 fill = c("#3288bd", "#abdda4", "#d53e4f"),
@@ -1022,13 +1057,18 @@ server <- function(input, output, session) {
 
     # Outputs a Venn diagram of common sequences
     output$common_seqs_venn <- renderPlot({
+                validate(
+            need(!is.null(productive_aa()),
+                "Can only perform function on productive amino acid sequences.")
+        )
         input$venn_button
         isolate({
             validate(
-                need(
-                    length(input$venn_id) == 2 | length(input$venn_id) == 3,
-                    "Please select only 2 or 3 repertoire ids"
-                )
+                need(!is.null(productive_aa()),
+                    "Can only perform function on productive amino acid sequences.")
+                %then%
+                    need(length(input$venn_id) == 2 | length(input$venn_id) == 3,
+                        "Please select only 2 or 3 repertoire ids")
             )
             grid::grid.draw(common_venn_data())
         })
@@ -1036,6 +1076,10 @@ server <- function(input, output, session) {
 
     # Creates a pairwise comparison heat map of repertoires
     pairwise_sim_data <- reactive({
+        validate(
+            need(!is.null(productive_aa()),
+                "Can only perform function on productive amino acid sequences.")
+        )
         similarity <- LymphoSeq2::scoringMatrix(productive_aa(), mode = input$mode)
         LymphoSeq2::pairwisePlot(matrix = similarity) +
             labs(fill = paste(input$mode, "\ncoefficient")) +
@@ -1066,7 +1110,7 @@ server <- function(input, output, session) {
 
     # Outputs an interative line plot of rarefactionan curves for repertoires
     output$rarefaction_curve <- renderPlotly({
-        LymphoSeq2::plotRarefactionCurve(airr_data())
+        LymphoSeq2::plotRarefactionCurve(stable())
     })
 
     stats_count_data <- reactive({
@@ -1132,7 +1176,8 @@ server <- function(input, output, session) {
     })
 
     top_prod_seq_data <- reactive({
-        LymphoSeq2::topSeqs(productive_aa(), input$top_seq_num) %>%
+        # TODO: check stable is not complete data (must be from productive sequences)
+        LymphoSeq2::topSeqs(stable(), input$top_seq_num) %>%
             dplyr::select(
                 repertoire_id, junction_aa, duplicate_count, duplicate_frequency,
                 v_call, d_call, j_call
@@ -1167,15 +1212,6 @@ server <- function(input, output, session) {
         })
     })
 
-    common_table_data <- reactive({
-        LymphoSeq2::commonSeqs(study_table = productive_aa())
-    })
-
-    output$common_seq_table <- DT::renderDataTable({
-        common_table_data() %>%
-            DT::datatable(filter = "top", options = list(scrollX = TRUE))
-    })
-
     observeEvent(input$calc_relate, {
         if (input$calc_relate == "no") {
             shinyjs::disable("edit_dis")
@@ -1187,7 +1223,7 @@ server <- function(input, output, session) {
     clone_data <- reactive({
         clone_data_copy <- clonality_data()
         if (input$calc_relate == "yes") {
-            clone_relate_data <- LymphoSeq2::clonalRelatedness(airr_data(), editDistance = input$edit_dis) %>%
+            clone_relate_data <- LymphoSeq2::clonalRelatedness(stable(), editDistance = input$edit_dis) %>%
                                     dplyr::select(clonalRelatedness)
             clone_data_copy$clonal_relatedness <- clone_relate_data
         }
@@ -1281,7 +1317,7 @@ server <- function(input, output, session) {
                 need(input$top_num > 0, "Please enter a number for tracking top clones")
             )
             clone_track_table <- LymphoSeq2::topSeqs(productive_aa(), top = input$top_num)
-        } 
+        }
         if (input$track_aa_choice == "yes") {
             validate (
                 need(length(input$track_aa) > 0, "Please select amino acid sequences to track")
@@ -1331,7 +1367,7 @@ server <- function(input, output, session) {
     })
 
     ireceptor_data <- reactive({
-        # EDIT!!!
+        # TODO: study table must be generated by searchPublished or topSeqs
         top_seqs <- LymphoSeq2::topSeqs(productive_table = productive_aa(), top = 1)
         LymphoSeq2::searchDB(top_seqs)
     })
@@ -1433,7 +1469,7 @@ server <- function(input, output, session) {
     })
 
     kmer_table_data <- reactive({
-        LymphoSeq2::countKmer(airr_data(), input$k_val, input$separate_by_rep)
+        LymphoSeq2::countKmer(productive_nt(), input$k_val, input$separate_by_rep)
     })
 
     output$count_kmers <- DT::renderDataTable({
