@@ -22,7 +22,7 @@ The application will accept inputs in the following formats:
 
 **Upload Size Limitations** 
 
-There are currently some limitations on how much data can be uploaded and processed. This application uses R and as data is read in, R loads it into memory. This means that in a local deployment of the application, the upper data limit will depend on how much memory is available on the device. If the uploaded files exceeds this limit, the outputs will not load. However, there are some possible workarounds.
+There are currently some limitations on how much data can be uploaded and processed as this application uses R, which has relatively poor memory management as it loads data into memory and can only work on in-memory data. This means that in a local deployment of the application, the upper limit will depend on the memory capacity of the device that the user runs the application on. If the uploaded files exceeds this limit, the outputs will not load. However, there are some possible workarounds.
 
 If the raw data exceeds the limit, the data can be processed through the Nextflow script to be condensed and compressed, resulting in a smaller file size. Another alternative is to manually filter the raw data beforehand to analyze a more specific subset of the data. 
 
