@@ -12,14 +12,16 @@ if (!require("ggalluvial", character.only = TRUE)) {
 if (!require("chorddiag", character.only = TRUE)) {
     devtools::install_github("mattflor/chorddiag", build_vignettes = FALSE)
 }
-if (!require("LymphoSeq2", character.only = TRUE)) {
-    devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
-}
+# if (!require("LymphoSeq2", character.only = TRUE)) {
+#     devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
+# }
 library(LymphoSeq2)
+# library(BiocManager)
+# options(repos = BiocManager::repositories())
 
 # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
-# max upload size (current: 1 GB)
+# max upload size (current: 2 GB)
 options(shiny.maxRequestSize = 2000 * 1024^2)
 
 
@@ -35,6 +37,8 @@ ui <-
                         fileInput("airr_files", label = "Upload Files", multiple = TRUE, accept = c(".tsv", ".rda", ".RData")),
                         conditionalPanel(
                             condition = "input.tabselected == 'airr_table'",
+                            radioButtons("analysis_table", "Select table to view and perform analysis on",
+                                        choices = c("AIRR", "Productive Amino Acid Sequences", "Productive Nucleotide Sequences")),
                             checkboxInput("hide_null", label = "Hide empty columns", value = FALSE)
                         ),
                         conditionalPanel(
@@ -559,6 +563,24 @@ server <- function(input, output, session) {
         }
     })
 
+    stable <- reactive({
+        validate(
+            need(
+                !is.null(input$airr_files),
+                "Please select files to upload to render output."
+            )
+        )
+        if (tools::file_ext(input$airr_files$name) == "tsv") {
+            if (input$analysis_table == "AIRR") {
+                airr_data()
+            } else if (input$analysis_table == "Productive Amino Acid Sequences") {
+                productive_aa()
+            } else if (input$analysis_table == "Productive Nucleotide Sequences") {
+                productive_nt()
+            }
+        }
+    })
+
 # ------------------------------------------------------------------------------------------------------------------ # # nolint
 
     img_formats <- c("PDF" = ".pdf", "RData" = ".rda")
@@ -581,6 +603,11 @@ server <- function(input, output, session) {
     #   - all plots should be cleared
     #   - all drop down selections should be updated to reflect upload data
     observeEvent(input$airr_files, {
+        if (tools::file_ext(input$airr_files$name) == "tsv") {
+            shinyjs::enable("analysis_table")
+        } else if (tools::file_ext(input$airr_files$name) == "rda") {
+            shinyjs::disable("analysis_table")
+        }
         airr_data()
         if (input$chord_button || input$venn_button || input$bar_button ||
             input$plot_button || input$diff_button || input$track_button ||
@@ -727,11 +754,11 @@ server <- function(input, output, session) {
 
     output$table <- DT::renderDataTable({
         if (input$hide_null) {
-            airr_data() %>%
+            stable() %>%
                 purrr::discard(~ all(is.na(.) | . == "")) %>%
                 DT::datatable(filter = "top", options = list(scrollX = TRUE))
         } else {
-            airr_data() %>%
+            stable() %>%
                 DT::datatable(filter = "top", options = list(scrollX = TRUE))
         }
     })
@@ -754,9 +781,9 @@ server <- function(input, output, session) {
             validate(
                 need(input$top_chord_num > 0, "Please enter number of top sequences.")
             )
-            chord_table <- LymphoSeq2::topSeqs(productive_nt(), input$top_chord_num)
+            chord_table <- LymphoSeq2::topSeqs(stable(), input$top_chord_num)
         } else {
-            chord_table <- productive_nt()
+            chord_table <- stable()
         }
         chord_table <- as.data.frame(apply(chord_table, 2, function(x) gsub("TCRB", "", x)))
         if (input$vdj_association == "VJ") {
@@ -1025,10 +1052,10 @@ server <- function(input, output, session) {
 
     # Creates a Lorenz curve
     lorenz_data <- reactive({
-        repertoire_ids <- productive_aa() %>%
+        repertoire_ids <- stable() %>%
             dplyr::pull(repertoire_id) %>%
             unique()
-        LymphoSeq2::lorenzCurve(repertoire_ids, airr_data()) +
+        LymphoSeq2::lorenzCurve(repertoire_ids, stable()) +
             ggplot2::coord_fixed(1 / 2)
     })
 
@@ -1127,7 +1154,7 @@ server <- function(input, output, session) {
     })
 
     top_seq_data <- reactive({
-        LymphoSeq2::topSeqsPlot(productive_aa(), top = input$top_seq_num)
+        LymphoSeq2::topSeqsPlot(stable(), top = input$top_seq_num)
     })
 
     output$top_seq_plot <- renderPlotly({
@@ -1293,7 +1320,7 @@ server <- function(input, output, session) {
     )
 
     lymphoseqdb_data <- reactive({
-        published <- LymphoSeq2::searchPublished(productive_aa())
+        published <- LymphoSeq2::searchPublished(stable())
         published %>%
             dplyr::filter(!is.na(PMID))
     })
@@ -1388,7 +1415,7 @@ server <- function(input, output, session) {
     })
 
     diff_table_data <- reactive({
-        LymphoSeq2::differentialAbundance(productive_aa(),
+        LymphoSeq2::differentialAbundance(stable(),
             input$diff_id,
             q = input$q_val, zero = input$zero_val
         )
@@ -1436,7 +1463,7 @@ server <- function(input, output, session) {
         shiny::bindEvent(input$kmer_distrib_button)
 
     output$seq_align_plot <- renderPlot({
-        msa <- LymphoSeq2::alignSeq(productive_nt(), repertoire_id = "IGH_MVQ92552A_BL", type = "junction", method = "ClustalW")
+        msa <- LymphoSeq2::alignSeq(stable(), repertoire_id = "IGH_MVQ92552A_BL", type = "junction", method = "ClustalW")
         LymphoSeq2::plotAlignment(msa)
     })
 
