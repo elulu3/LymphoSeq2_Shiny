@@ -3,7 +3,7 @@ required_packages <- c(
   "shinyjs", "shinycssloaders", "shinythemes", "shinyalert",
   "ggplot2", "plotly", "DT", "heatmaply", "pheatmap",
   "tidyverse", "htmltools", "sp", "writexl", "wordcloud2",
-  "remotes", "devtools"
+  "remotes"
 )
 lapply(
   required_packages,
@@ -14,7 +14,7 @@ if (!require("ggalluvial", character.only = TRUE)) {
   remotes::install_github("corybrunson/ggalluvial@main", build_vignettes = FALSE)
 }
 if (!require("chorddiag", character.only = TRUE)) {
-  devtools::install_github("mattflor/chorddiag", build_vignettes = FALSE)
+  remotets::install_github("mattflor/chorddiag", build_vignettes = FALSE)
 }
 # if (!require("LymphoSeq2", character.only = TRUE)) {
 #     devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
@@ -393,6 +393,9 @@ ui <-
             label = "Select 2 repertoire ids to be compared",
             choices = c(""), multiple = TRUE
           ),
+          # radioButtons("diff_junction_type", "Select sequences to use",
+          #     choices = c("junction_aa", "junction"), inline = TRUE
+          # ),
           numericInput("q_val", "q Value (False Discovery Rate):",
             value = 1, min = 0, max = 1
           ),
@@ -425,8 +428,6 @@ ui <-
       tabPanel("iReceptor", value = "search_ireceptor",
         sidebarLayout(
           sidebarPanel(
-            fileInput("airr_files", label = "Upload Files",
-                      multiple = TRUE, accept = c(".tsv", ".rda", ".RData")),
             radioButtons("search_table", "Select table to search database with",
               choices = c("Published Sequences from LymphoSeqDB", "Top Sequences")
             ),
@@ -631,7 +632,7 @@ server <- function(input, output, session) {
   shinyjs::disable("edit_dis")
   shinyjs::disable("search_top")
   shinyjs::hide("pdf")
-  rda_envir <- NULL     # should not be global?
+  rda_envir <<- NULL
 
   # Standardizes input files into AIRR-compliant format
   airr_data <- reactive({
@@ -656,7 +657,7 @@ server <- function(input, output, session) {
             ))
           table
         } else if (check_file_ext(input$airr_files$name, "rda")) {
-          rda_envir <- new.env()
+          rda_envir <<- new.env()
           name <- load(input$airr_files$datapath, envir = rda_envir)
           rda_envir$study_table
         }
@@ -684,9 +685,8 @@ server <- function(input, output, session) {
         aggregate = "junction_aa"
       )
     } else if (input$airr_files$name == "amino_table.rda") {
-      rda_envir <- new.env()
+      rda_envir <<- new.env()
       name <- load(input$airr_files$datapath, envir = rda_envir)
-      print(rda_envir$amino_table)
       rda_envir$amino_table
     } else {
       rda_envir$amino_table
@@ -708,7 +708,7 @@ server <- function(input, output, session) {
       )
     } else if (check_file_ext(input$airr_files$name, "rda")) {
       if (input$airr_files$name == "nucleotide_table.rda") {
-        rda_envir <- new.env()
+        rda_envir <<- new.env()
         name <- load(input$airr_files$datapath, envir = rda_envir)
         rda_envir$nucleotide_table
       } else {
@@ -730,7 +730,7 @@ server <- function(input, output, session) {
     if (check_file_ext(input$airr_files$name, "tsv")) {
       LymphoSeq2::clonality(study_table = airr_data())
     } else if (input$airr_files$name == "summary_table.rda") {
-      rda_envir <- new.env()
+      rda_envir <<- new.env()
       name <- load(input$airr_files$datapath, envir = rda_envir)
       rda_envir$summary_table
     } else {
@@ -745,24 +745,32 @@ server <- function(input, output, session) {
         "Please select files to upload to render output."
       )
     )
-    if (check_file_ext(input$airr_files$name, "tsv")) {
-      if (input$analysis_table == "AIRR") {
+    # if (check_file_ext(input$airr_files$name, "tsv")) {
+    #   if (input$analysis_table == "AIRR") {
+    #     airr_data()
+    #   } else if (input$analysis_table == "Productive Amino Acid Sequences") {
+    #     productive_aa()
+    #   } else if (input$analysis_table == "Productive Nucleotide Sequences") {
+    #     productive_nt()
+    #   }
+    # } else 
+    # if (check_file_ext(input$airr_files$name, "rda")) {
+    #   if (input$airr_files$name == "amino_table.rda") {
+    #     productive_aa()
+    #   } else if (input$airr_files$name == "nucleotide_table.rda") {
+    #     productive_nt()
+    #   } else if (input$airr_files$name == "summary_table.rda") {
+    #     clonality_data()
+    #   } else  if (input$airr_files$name == "study_table.rda"){
+    #     airr_data()
+    #   }
+    # } else 
+    if (input$analysis_table == "AIRR") {
         airr_data()
-      } else if (input$analysis_table == "Productive Amino Acid Sequences") {
-        productive_aa()
-      } else if (input$analysis_table == "Productive Nucleotide Sequences") {
-        productive_nt()
-      }
-    } else if (check_file_ext(input$airr_files$name, "rda")) {
-      if (input$airr_files$name == "amino_table.rda") {
-        productive_aa()
-      } else if (input$airr_files$name == "nucleotide_table.rda") {
-        productive_nt()
-      } else if (input$airr_files$name == "summary_table.rda") {
-        clonality_data()
-      } else {
-        airr_data()
-      }
+    } else if (input$analysis_table == "Productive Amino Acid Sequences") {
+      productive_aa()
+    } else if (input$analysis_table == "Productive Nucleotide Sequences") {
+      productive_nt()
     }
   })
 
@@ -787,11 +795,12 @@ server <- function(input, output, session) {
   #   - all plots should be cleared
   #   - all drop down selections should be updated to reflect uploaded data
   observeEvent(input$airr_files, {
-    if (check_file_ext(input$airr_files$name, "tsv")) {
-      shinyjs::enable("analysis_table")
-    } else if (check_file_ext(input$airr_files$name, "rda")) {
-      shinyjs::disable("analysis_table")
-    }
+    # if (check_file_ext(input$airr_files$name, "tsv")) {
+    #   shinyjs::enable("analysis_table")
+    # } 
+    # else if (check_file_ext(input$airr_files$name, "rda")) {
+    #   shinyjs::disable("analysis_table")
+    # }
     stable()
     if (input$chord_button || input$venn_button || input$bar_button ||
       input$plot_button || input$diff_button || input$track_button ||
@@ -1680,18 +1689,30 @@ server <- function(input, output, session) {
   })
 
   diff_table_data <- reactive({
-    LymphoSeq2::differentialAbundance(stable(),
-      input$diff_id,
-      q = input$q_val, zero = input$zero_val
+    # if (input$diff_junction_type == "junction_aa") {
+    LymphoSeq2::differentialAbundance(study_table = productive_aa(),
+                                      repertoire_ids = input$diff_id,
+                                      type = "junction_aa",
+                                      q = input$q_val,
+                                      zero = input$zero_val
     )
+    # } else if (input$diff_junction_type == "junction") {
+    #   LymphoSeq2::differentialAbundance(study_table = productive_nt(),
+    #                                     repertoire_ids = input$diff_id,
+    #                                     type = "junction",
+    #                                     q = input$q_val,
+    #                                     zero = input$zero_val
+    #   )
+    # }
+
   })
 
   output$diff_abundance <- DT::renderDataTable({
     input$diff_button
-    validate(
-      need(length(input$diff_id) == 2, "Please select 2 repertoire ids")
-    )
     isolate({
+      validate(
+        need(length(input$diff_id) == 2, "Please select 2 repertoire ids")
+      )
       diff_table_data() %>%
         DT::datatable(filter = "top", options = list(scrollX = TRUE))
     })
