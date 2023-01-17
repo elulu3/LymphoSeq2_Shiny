@@ -4,23 +4,35 @@ LymphoSeq2_Shiny is an interactive web application of [LymphoSeq2](https://githu
 
 ## Dependencies
 
-All of the required packages will be automtically installed when the application is run.
+All of the required packages will be automatically installed when the application is run.
+
+**Note:** LymphoSeq2 is currently undergoing updates and so some functions in the application may not work as intended.
 
 ## Running the Application Locally (from source)
 
-The **Shiny** package must first be loaded into the R session. Then, to start the application, simply execute Shiny's `runApp` function.
+First, clone the repository in the terminal.
 
 ```
-# load the Shiny package
+# retrieve a local copy of the code
+git clone https://github.com/elulu3/LymphoSeq2_Shiny.git
+```
+
+In an R session, run the application from the copy of the code.
+
+```
+# install shiny package
+install.packages("shiny")
+
+# load the shiny package
 library(shiny)
 
-# run the application (assuming current directory is LymphoSeq2_Shiny)
-runApp("LymphoSeq2_app/")
+# run the application by providing runApp the path to app.R
+runApp("LymphoSeq2_Shiny/LymphoSeq2_app/")
 ```
 
 ## Using the Application
 
-A comprehensive User Guide is available [here](https://elulu3.github.io/LymphoSeq2_Shiny/).
+A comprehensive User Guide is available [here](https://elulu3.github.io/LymphoSeq2_Shiny/) [update in progress].
 
 ## Adjusting for Data Size and Memory Usage
 
