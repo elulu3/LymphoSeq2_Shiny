@@ -16,9 +16,9 @@ if (!require("ggalluvial", character.only = TRUE)) {
 if (!require("chorddiag", character.only = TRUE)) {
   remotets::install_github("mattflor/chorddiag", build_vignettes = FALSE)
 }
-# if (!require("LymphoSeq2", character.only = TRUE)) {
-#     devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
-# }
+if (!require("LymphoSeq2", character.only = TRUE)) {
+    devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
+}
 library(LymphoSeq2)
 # library(BiocManager)
 # options(repos = BiocManager::repositories())
@@ -599,6 +599,7 @@ alluvial_tooltip <- function(plot_hover) {
 }
 
 show_data_formats <- function() {
+  shinyjs::show("rda")
   shinyjs::show("tsv")
   shinyjs::show("excel")
   shinyjs::hide("pdf")
@@ -607,6 +608,7 @@ show_data_formats <- function() {
 show_img_formats <- function() {
   shinyjs::hide("tsv")
   shinyjs::hide("excel")
+  shinyjs::show("rda")
   shinyjs::show("pdf")
 }
 
