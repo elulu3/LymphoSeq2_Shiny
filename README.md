@@ -17,7 +17,7 @@ First, clone the repository in the terminal.
 git clone https://github.com/elulu3/LymphoSeq2_Shiny.git
 ```
 
-In an R session, run the application from the copy of the code.
+Start an R session and in that session, run the application from the copy of the code.
 
 ```
 # install shiny package
