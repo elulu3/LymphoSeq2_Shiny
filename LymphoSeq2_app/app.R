@@ -14,7 +14,7 @@ if (!require("ggalluvial", character.only = TRUE)) {
   remotes::install_github("corybrunson/ggalluvial@main", build_vignettes = FALSE)
 }
 if (!require("chorddiag", character.only = TRUE)) {
-  remotets::install_github("mattflor/chorddiag", build_vignettes = FALSE)
+  remotes::install_github("mattflor/chorddiag", build_vignettes = FALSE)
 }
 if (!require("LymphoSeq2", character.only = TRUE)) {
     devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
