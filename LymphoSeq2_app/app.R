@@ -17,7 +17,7 @@ if (!require("chorddiag", character.only = TRUE)) {
   remotes::install_github("mattflor/chorddiag", build_vignettes = FALSE)
 }
 if (!require("LymphoSeq2", character.only = TRUE)) {
-    devtools::install_github("WarrenLabFH/LymphoSeq2", ref="v1", build_vignette=FALSE)
+    devtools::install_github("shashidhar22/LymphoSeq2", build_vignettes = FALSE)
 }
 library(LymphoSeq2)
 # library(BiocManager)
